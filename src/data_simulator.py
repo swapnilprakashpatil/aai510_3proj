@@ -77,6 +77,28 @@ class DataSimulator:
             )
         if row['Handcap'] > 0:
             notes.append(f"Patient reports handicap level {row['Handcap']}. Needs assistance on visit.")
+
+        if row.get('SMS_received', 0) == 1:
+            notes.append("Patient received SMS reminder for appointment.")
+        if row.get('Scholarship', 0) == 1:
+            notes.append("Patient is enrolled in healthcare scholarship program.")
+        if row.get('Age', 0) > 65:
+            notes.append("Geriatric patient. Fall risk assessment recommended.")
+        if row.get('Age', 0) < 12:
+            notes.append("Pediatric patient. Parent/guardian present during consultation.")
+            notes.append("Discussed vaccination schedule and growth milestones with parent/guardian.")
+            if row.get('No-show', '').strip().lower() == 'yes':
+                notes.append("Missed appointment discussed with parent/guardian. Emphasized importance of regular pediatric visits.")
+        elif row.get('Age', 0) < 18:
+            notes.append("Minor patient. Consent obtained from parent/guardian for treatment.")
+            if row.get('No-show', '').strip().lower() == 'yes':
+                notes.append("Missed appointment discussed with parent/guardian. Explored barriers to attendance for minors.")
+        if row.get('No-show', '').strip().lower() == 'yes':
+            notes.append("Patient previously missed appointments. Discussed barriers to attendance.")
+        if row.get('Gender', '').strip().upper() == 'F' and row.get('Age', 0) > 18:
+            notes.append("Discussed women's health screening and preventive care.")
+        if row.get('Gender', '').strip().upper() == 'M' and row.get('Age', 0) > 18:
+            notes.append("Discussed men's health and cardiovascular risk factors.")
         return " ".join(notes) if notes else "No ongoing chronic conditions noted. General checkup advised."
 
     def _generate_patient_sentiment(self, row):
