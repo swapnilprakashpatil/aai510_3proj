@@ -1,45 +1,14 @@
-pattern
-not\s+\w+
-no\s+\w+
-don't\s+\w+
-doesn't\s+\w+
-didn't\s+\w+
-isn't\s+\w+
-aren't\s+\w+
-wasn't\s+\w+
-weren't\s+\w+
-haven't\s+\w+
-hasn't\s+\w+
-hadn't\s+\w+
-won't\s+\w+
-wouldn't\s+\w+
-can't\s+\w+
-cannot\s+\w+
-couldn't\s+\w+
-shouldn't\s+\w+
-never\s+\w+
-neither\s+\w+
-nor\s+\w+
-none\s+\w+
-without\s+\w+
-absence\s+of\s+\w+
-lack\s+of\s+\w+
-free\s+from\s+\w+
-deny\s+\w+
-denies\s+\w+
-refused\s+\w+
-refute\s+\w+
-reject\s+\w+
-nothing\s+\w+
-nobody\s+\w+
-nowhere\s+\w+
-rarely\s+\w+
-seldom\s+\w+
-hardly\s+\w+
-barely\s+\w+
-scarcely\s+\w+
-at\s+all
-whatsoever
+negation_phrase
+no 
+not 
+without 
+absence of 
+doesn't 
+isn't 
+aren't 
+don't 
+non-
+never 
 lacks 
 free from 
 shows no 
@@ -56,21 +25,3 @@ no evidence of
 no indication of
 no signs of
 absence of any
-not even
-shows absence of
-completely absent
-effectively ruled out
-is absent
-are absent
-ruled out for
-explicitly denied
-patient denies
-not bothered by
-not experiencing
-not feeling
-not having
-not at all
-never had
-rarely if ever
-infrequently
-not reported

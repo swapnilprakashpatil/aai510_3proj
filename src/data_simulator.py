@@ -5,23 +5,35 @@ import random
 
 class DataSimulator:
     def __init__(self, general_no_show_reasons=None):
-        if general_no_show_reasons is None:
-            self.general_no_show_reasons = [
-                "Patient reported forgetting the appointment.",
-                "Missed due to lack of transportation.",
-                "Appointment was too early in the morning.",
-                "Family emergency prevented attendance.",
-                "Patient confused the appointment date.",
-                "Patient felt better and didn't think follow-up was necessary.",
-                "Couldn't get time off from work.",
-                "Patient decided to try alternative treatment.",
-                "Bad weather on appointment day.",
-                "Patient was anxious about the visit.",
-            ]
-        else:
-            self.general_no_show_reasons = general_no_show_reasons
+        self.general_no_show_reasons = general_no_show_reasons or self._default_no_show_reasons()
 
-    def get_age_based_reasons(self, age):
+    def simulate(self, input_csv, output_csv, notes_col='PatientNotes', sentiment_col='PatientSentiment', reason_col='NoShowReason'):
+        df = pd.read_csv(input_csv)
+        df[notes_col] = df.apply(self._generate_patient_notes, axis=1)
+        df[sentiment_col] = df.apply(self._generate_patient_sentiment, axis=1)
+        df[reason_col] = df.apply(self._generate_no_show_reason, axis=1)
+        df.to_csv(output_csv, index=False)
+        return df
+
+    def _default_no_show_reasons(self):
+        return [
+            "Patient reported forgetting the appointment.",
+            "Missed due to lack of transportation.",
+            "Appointment was too early in the morning.",
+            "Family emergency prevented attendance.",
+            "Patient confused the appointment date.",
+            "Patient felt better and didn't think follow-up was necessary.",
+            "Couldn't get time off from work.",
+            "Patient decided to try alternative treatment.",
+            "Bad weather on appointment day.",
+            "Patient was anxious about the visit.",
+        ]
+
+    def _generate_no_show_reason(self, row):
+        reasons = self.general_no_show_reasons + self._get_gender_based_reasons(row['Gender']) + self._get_age_based_reasons(row['Age'])
+        return random.choice(reasons) if str(row['No-show']).strip().lower() == 'yes' else "NA"
+
+    def _get_age_based_reasons(self, age):
         if age < 18:
             return [
                 "Minor dependent on guardian who couldn’t bring them.",
@@ -33,10 +45,9 @@ class DataSimulator:
                 "Health deterioration on the day of appointment.",
                 "Elderly patient forgot the appointment time.",
             ]
-        else:
-            return []
+        return []
 
-    def get_gender_based_reasons(self, gender):
+    def _get_gender_based_reasons(self, gender):
         gender = str(gender).strip().upper()
         if gender == 'F':
             return [
@@ -48,10 +59,9 @@ class DataSimulator:
                 "Patient reported high workload at job.",
                 "Missed due to extended shift or overtime.",
             ]
-        else:
-            return []
+        return []
 
-    def generate_patient_notes(self, row):
+    def _generate_patient_notes(self, row):
         notes = []
         if row['Hypertension'] == 1:
             notes.append(
@@ -69,7 +79,7 @@ class DataSimulator:
             notes.append(f"Patient reports handicap level {row['Handcap']}. Needs assistance on visit.")
         return " ".join(notes) if notes else "No ongoing chronic conditions noted. General checkup advised."
 
-    def generate_patient_sentiment(self, row):
+    def _generate_patient_sentiment(self, row):
         sentiments = []
         if row['Diabetes'] == 1:
             sentiments.append("Patient experiences stress and anxiety managing blood sugar levels and dietary restrictions.")
@@ -90,26 +100,3 @@ class DataSimulator:
         if not sentiments:
             sentiments.append("Patient is hopeful and shows no significant anxiety, stress, or fear related to health conditions.")
         return " ".join(sentiments)
-
-    def get_patient_notes(self, row):
-        return self.generate_patient_notes(row)
-
-    def get_patient_sentiment(self, row):
-        return self.generate_patient_sentiment(row)
-
-    def get_no_show_reason(self, row):
-        reasons = self.general_no_show_reasons + \
-                  self.get_gender_based_reasons(row['Gender']) + \
-                  self.get_age_based_reasons(row['Age'])
-        if str(row['No-show']).strip().lower() == 'yes':
-            return random.choice(reasons)
-        else:
-            return "NA"
-
-    def simulate(self, input_csv, output_csv, notes_col='PatientNotes', sentiment_col='PatientSentiment', reason_col='NoShowReason'):
-        df = pd.read_csv(input_csv)
-        df[notes_col] = df.apply(self.get_patient_notes, axis=1)
-        df[sentiment_col] = df.apply(self.get_patient_sentiment, axis=1)
-        df[reason_col] = df.apply(self.get_no_show_reason, axis=1)
-        df.to_csv(output_csv, index=False)
-        return df

@@ -1,383 +1,858 @@
 import seaborn as sns
-from wordcloud import WordCloud
-from matplotlib import pyplot as plt
-from collections import Counter
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from collections import Counter
+from typing import Optional, Tuple
+from config import EMOTION_STATES
+from sklearn.metrics import confusion_matrix, roc_curve, auc
 
-def plot_correlation_heatmap(data):
-    plt.figure(figsize=(10, 8))
-    correlation_matrix = data.corr()
-    sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='crest', square=True, linewidths=0.5, linecolor='gray', cbar_kws={'shrink': 0.8})
-    plt.title('Correlation Heatmap', fontsize=16, fontweight='bold')
-    plt.xticks(fontsize=11, rotation=45, ha='right')
-    plt.yticks(fontsize=11)
-    plt.tight_layout()
-    plt.show()
-
-def plot_countplot(data, x, hue=None):
-    plt.figure(figsize=(10, 6))
-    sns.set_palette('crest')
-    sns.set_style('whitegrid')
-    ax = sns.countplot(data=data, x=x, hue=hue, edgecolor='black', linewidth=1.2, alpha=0.85)
-    ax.set_title(f'Count Plot of {x}', fontsize=16, fontweight='bold')
-    ax.set_xlabel(x, fontsize=13)
-    ax.set_ylabel('Count', fontsize=13)
-    ax.tick_params(axis='both', labelsize=11)
-    plt.tight_layout()
-    plt.show()
-
-def plot_boxplot(data, x, y):
-    plt.figure(figsize=(10, 6))
-    sns.boxplot(data=data, x=x, y=y, palette='crest')
-    plt.title(f'Box Plot of {y} by {x}', fontsize=16, fontweight='bold')
-    plt.xlabel(x, fontsize=13)
-    plt.ylabel(y, fontsize=13)
-    plt.xticks(fontsize=11, rotation=45, ha='right')
-    plt.yticks(fontsize=11)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.tight_layout()
-    plt.show()
-
-def plot_violinplot(data, x, y):
-    plt.figure(figsize=(10, 6))
-    sns.violinplot(data=data, x=x, y=y, palette='crest')
-    plt.title(f'Violin Plot of {y} by {x}', fontsize=16, fontweight='bold')
-    plt.xlabel(x, fontsize=13)
-    plt.ylabel(y, fontsize=13)
-    plt.xticks(fontsize=11, rotation=45, ha='right')
-    plt.yticks(fontsize=11)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.tight_layout()
-    plt.show()
-
-def plot_pca_scatter(data, pca_results, cluster_labels):
-    plt.figure(figsize=(10, 8))
-    plt.scatter(pca_results[:, 0], pca_results[:, 1], c=cluster_labels, cmap='viridis', alpha=0.5)
-    plt.title('PCA Scatter Plot', fontsize=16, fontweight='bold')
-    plt.xlabel('Principal Component 1', fontsize=13)
-    plt.ylabel('Principal Component 2', fontsize=13)
-    plt.colorbar(label='Cluster Label')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.tight_layout()
-    plt.show()
-
-def plot_word_cloud(word_freq):
-    plt.figure(figsize=(10, 6))
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis('off')
-    plt.title('Word Cloud', fontsize=16, fontweight='bold')
-    plt.tight_layout()
-    plt.show()
-
-def plot_histplot(data, column, bins=30, kde=True, title='', xlabel='', ylabel='', figsize=(10, 6), color=None):
-    plt.figure(figsize=figsize)
-    ax = sns.histplot(
-        data[column], bins=bins, kde=kde, color=color, edgecolor=None, linewidth=0, alpha=0.85
-    )
-    median = data[column].median()
-    mean = data[column].mean()
-    ax.axvline(median, color='red', linestyle='--', linewidth=2, label=f'Median: {median:.2f}')
-    ax.axvline(mean, color='blue', linestyle='-', linewidth=2, label=f'Mean: {mean:.2f}')
-    ax.legend(fontsize=11)
-    ax.set_title(title or f'{column} Distributionssss', fontsize=16, fontweight='bold')
-    ax.set_xlabel(xlabel or column, fontsize=13)
-    ax.set_ylabel(ylabel or 'Frequency', fontsize=13)
-    ax.tick_params(axis='both', labelsize=11)
-    plt.tight_layout()
-    plt.show()
-
-def plot_countplot(data, column, title='', xlabel='', ylabel='', figsize=(8, 5), palette='deep', colors=None):
-    plt.figure(figsize=figsize)
-    sns.set_style('darkgrid')
-    color_param = {'palette': colors if colors else palette}
+class PlotGenerator:
     
-    ax = sns.countplot(x=column, data=data, edgecolor='black', linewidth=0.8, alpha=0.85, **color_param)
-    ax.set_title(title or f'{column} Countplot', fontsize=16, fontweight='bold')
-    ax.set_xlabel(xlabel or column, fontsize=13)
-    ax.set_ylabel(ylabel or 'Count', fontsize=13)
-    ax.tick_params(axis='both', labelsize=11)
-    for p in ax.patches:
-        ax.annotate(f'{int(p.get_height())}', (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', fontsize=11, color='black', xytext=(0, 8), textcoords='offset points')
-    plt.tight_layout()
-    plt.show()
+    def __init__(self, style: str = 'whitegrid', palette: str = 'viridis', figsize: Tuple[int, int] = (10, 6)):
+        self.default_style = style
+        self.default_palette = palette
+        self.default_figsize = figsize
+        sns.set_style(self.default_style)
 
-def plot_heatmap(data, title='', fmt='.2f', cmap='viridis', square=True, figsize=(12, 8)):
-    plt.figure(figsize=figsize)
-    sns.set_palette('deep')
-    sns.set_style('darkgrid')
-    ax = sns.heatmap(data, annot=True, fmt=fmt, cmap=cmap, square=square, linewidths=0, linecolor=None, cbar_kws={'shrink': 0.8})
-    ax.set_title(title or 'Correlation Heatmap', fontsize=16, fontweight='bold')
-    plt.xticks(fontsize=11, rotation=45, ha='right')
-    plt.yticks(fontsize=11)
-    plt.tight_layout()
-    plt.show()
+    def _setup_plot(self, figsize: Optional[Tuple[int, int]] = None, style: Optional[str] = None, palette: Optional[str] = None):
+        if figsize is None:
+            figsize = self.default_figsize
+        if style:
+            sns.set_style(style)
+        if palette:
+            sns.set_palette(palette)
 
-def plot_emotional_states_bar(df, emotional_states=None, figsize=(8, 5), palette='deep'):
-    if emotional_states is None:
-        emotional_states = ['anxiety', 'stress', 'confusion', 'hopeful', 'fear']
-    emotion_counts = df[emotional_states].sum().sort_values(ascending=False)
-    plt.figure(figsize=figsize)
-    sns.barplot(x=emotion_counts.index, y=emotion_counts.values, palette=palette)
-    plt.title('Emotional States in Patient Sentiment', fontsize=16, fontweight='bold')
-    plt.xlabel('Emotional State', fontsize=13)
-    plt.ylabel('Count', fontsize=13)
-    plt.tight_layout()
-    plt.show()
+        plt.figure(figsize=figsize)
 
-def plot_text_wordcloud(series, title='Word Cloud', figsize=(10, 6)):
-    words = ' '.join(series.dropna().astype(str)).lower().split()
-    word_freq = Counter(words)
-    plt.figure(figsize=figsize)
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis('off')
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.tight_layout()
-    plt.show()
+    def _add_common_plot_elements(self, title: str, xlabel: str, ylabel: str):
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel(xlabel, fontsize=13)
+        plt.ylabel(ylabel, fontsize=13)
+        plt.xticks(fontsize=11, rotation=45, ha='right')
+        plt.yticks(fontsize=11)
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-def plot_confusion_matrix(conf_matrix, classes=None, title='Confusion Matrix', 
-                      figsize=(8, 6), cmap='Blues', normalize=False):
-    
-    plt.figure(figsize=figsize)
-    
-    if normalize:
-        conf_matrix = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
-        fmt = '.2f'
-    else:
-        fmt = 'd'
-    
-    ax = sns.heatmap(conf_matrix, annot=True, fmt=fmt, cmap=cmap)
-    
-    # Set labels and title
-    if classes:
-        ax.set_xticklabels(classes)
-        ax.set_yticklabels(classes)
-    
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.ylabel('True Label', fontsize=13)
-    plt.xlabel('Predicted Label', fontsize=13)
-    plt.tight_layout()
-    plt.show()
-    
-def plot_training_metrics(metrics, title='Training Metrics', figsize=(10, 6)):
-    """
-    Plot training metrics over epochs.
-    
-    Parameters:
-    -----------
-    metrics : dict
-        Dictionary containing metrics to plot
-    title : str, optional
-        The title of the plot
-    figsize : tuple, optional
-        Figure size as (width, height)
-    """
-    plt.figure(figsize=figsize)
-    
-    for metric_name, values in metrics.items():
-        if isinstance(values, list) and len(values) > 0:
-            plt.plot(range(1, len(values) + 1), values, marker='o', label=metric_name)
-    
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.xlabel('Epoch', fontsize=13)
-    plt.ylabel('Score', fontsize=13)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    def plot_correlation_heatmap(self, data: pd.DataFrame):
+        self._setup_plot(figsize=(10, 8))
+        correlation_matrix = data.corr()
+        sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap='crest', 
+                    square=True, linewidths=0.5, linecolor='gray', 
+                    cbar_kws={'shrink': 0.8})
+        self._add_common_plot_elements('Correlation Heatmap', '', '')
+        plt.tight_layout()
+        plt.show()
 
-def plot_emotion_distribution(data, emotions=None, figsize=(10, 6), title='Emotion Distribution', 
-                             palette='viridis', by_category=None):
-    if emotions is None:
-        emotions = ['anxiety', 'stress', 'confusion', 'hopeful', 'fear']
-    
-    plt.figure(figsize=figsize)
-    
-    if by_category is not None and by_category in data.columns:
-        # Create grouped barplots
-        emotion_counts = {}
-        categories = data[by_category].unique()
+    def plot_countplot(self, data: pd.DataFrame, column: str, title: str = '', xlabel: str = '', ylabel: str = '', 
+                       figsize: Tuple[int, int] = (8, 5), palette: str = 'deep', colors: Optional[list] = None):
         
-        for category in categories:
-            category_data = data[data[by_category] == category]
-            emotion_counts[category] = category_data[emotions].sum().values
+        self._setup_plot(figsize=figsize)
+        sns.set_style('darkgrid')
+        color_param = {'palette': colors if colors else palette}
+
+        ax = sns.countplot(x=column, data=data, edgecolor='black', linewidth=0.8, alpha=0.85, **color_param)
+        ax.set_title(title or f'{column} Countplot', fontsize=16, fontweight='bold')
+        ax.set_xlabel(xlabel or column, fontsize=13)
+        ax.set_ylabel(ylabel or 'Count', fontsize=13)
+        ax.tick_params(axis='both', labelsize=11)
+        for p in ax.patches:
+            ax.annotate(f'{int(p.get_height())}', 
+                       (p.get_x() + p.get_width() / 2., p.get_height()),
+                       ha='center', va='center', fontsize=11, color='black', 
+                       xytext=(0, 8), textcoords='offset points')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_boxplot(self, data: pd.DataFrame, x: str, y: str):
+        self._setup_plot(figsize=(10, 6))
+        sns.boxplot(data=data, x=x, y=y, palette='crest')
+        self._add_common_plot_elements(f'Box Plot of {y} by {x}', x, y)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_violinplot(self, data: pd.DataFrame, x: str, y: str):
+        self._setup_plot(figsize=(10, 6))
+        sns.violinplot(data=data, x=x, y=y, palette='crest')
+        self._add_common_plot_elements(f'Violin Plot of {y} by {x}', x, y)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_pca_scatter(self, data, pca_results, cluster_labels):
+        self._setup_plot(figsize=(10, 8))
+        plt.scatter(pca_results[:, 0], pca_results[:, 1], c=cluster_labels, 
+                   cmap='viridis', alpha=0.5)
+        plt.title('PCA Scatter Plot', fontsize=16, fontweight='bold')
+        plt.xlabel('Principal Component 1', fontsize=13)
+        plt.ylabel('Principal Component 2', fontsize=13)
+        plt.colorbar(label='Cluster Label')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_word_cloud(self, word_freq):
+        self._setup_plot(figsize=(10, 6))
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title('Word Cloud', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_histplot(self, data, column, bins=30, kde=True, title='', xlabel='', 
+                     ylabel='', figsize=(10, 6), color=None):
+        self._setup_plot(figsize=figsize)
+        ax = sns.histplot(data[column], bins=bins, kde=kde, color=color, 
+                         edgecolor=None, linewidth=0, alpha=0.85)
+        median = data[column].median()
+        mean = data[column].mean()
+        ax.axvline(median, color='red', linestyle='--', linewidth=2, 
+                  label=f'Median: {median:.2f}')
+        ax.axvline(mean, color='blue', linestyle='-', linewidth=2, 
+                  label=f'Mean: {mean:.2f}')
+        ax.legend(fontsize=11)
+        ax.set_title(title or f'{column} Distribution', fontsize=16, fontweight='bold')
+        ax.set_xlabel(xlabel or column, fontsize=13)
+        ax.set_ylabel(ylabel or 'Frequency', fontsize=13)
+        ax.tick_params(axis='both', labelsize=11)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_countplot_advanced(self, data, column, title='', xlabel='', ylabel='', 
+                               figsize=(8, 5), palette='deep', colors=None):
         
-        # Create bar positions
-        bar_width = 0.8 / len(categories)
-        r = np.arange(len(emotions))
+        self._setup_plot(figsize=figsize)
+        sns.set_style('darkgrid')
+        color_param = {'palette': colors if colors else palette}
         
-        for i, (category, counts) in enumerate(emotion_counts.items()):
-            plt.bar(r + i * bar_width, counts, width=bar_width, label=category, alpha=0.7)
+        ax = sns.countplot(x=column, data=data, edgecolor='black', linewidth=0.8, 
+                          alpha=0.85, **color_param)
+        ax.set_title(title or f'{column} Countplot', fontsize=16, fontweight='bold')
+        ax.set_xlabel(xlabel or column, fontsize=13)
+        ax.set_ylabel(ylabel or 'Count', fontsize=13)
+        ax.tick_params(axis='both', labelsize=11)
+        for p in ax.patches:
+            ax.annotate(f'{int(p.get_height())}', 
+                       (p.get_x() + p.get_width() / 2., p.get_height()),
+                       ha='center', va='center', fontsize=11, color='black', 
+                       xytext=(0, 8), textcoords='offset points')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_heatmap(self, data, title='', fmt='.2f', cmap='viridis', 
+                    square=True, figsize=(12, 8)):
         
-        plt.xticks(r + bar_width * (len(categories) - 1) / 2, emotions)
-        plt.legend(title=by_category)
+        self._setup_plot(figsize=figsize)
+        sns.set_palette('deep')
+        sns.set_style('darkgrid')
+        ax = sns.heatmap(data, annot=True, fmt=fmt, cmap=cmap, square=square, 
+                        linewidths=0, linecolor=None, cbar_kws={'shrink': 0.8})
+        ax.set_title(title or 'Correlation Heatmap', fontsize=16, fontweight='bold')
+        plt.xticks(fontsize=11, rotation=45, ha='right')
+        plt.yticks(fontsize=11)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_emotional_states_bar(self, df, emotional_states=None, figsize=(8, 5), palette='deep'):
         
-    else:
-        # Simple counts
-        emotion_counts = data[emotions].sum().sort_values(ascending=False)
+        if emotional_states is None:
+            emotional_states = EMOTION_STATES
+            
+        emotion_counts = df[emotional_states].sum().sort_values(ascending=False)
+        self._setup_plot(figsize=figsize)
         sns.barplot(x=emotion_counts.index, y=emotion_counts.values, palette=palette)
-    
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.xlabel('Emotion', fontsize=13)
-    plt.ylabel('Count', fontsize=13)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
+        plt.title('Emotional States in Patient Sentiment', fontsize=16, fontweight='bold')
+        plt.xlabel('Emotional State', fontsize=13)
+        plt.ylabel('Count', fontsize=13)
+        plt.tight_layout()
+        plt.show()
 
-def plot_emotion_heatmap(data, emotions=None, correlation_with=None, figsize=(10, 8), cmap='coolwarm'):
-    if emotions is None:
-        emotions = ['anxiety', 'stress', 'confusion', 'hopeful', 'fear']
-    
-    if correlation_with is None:
-        # Correlate emotions with each other
-        corr_matrix = data[emotions].corr()
-    else:
-        # Select numeric columns from correlation_with
-        numeric_cols = data[correlation_with].select_dtypes(include=['number']).columns.tolist()
-        if not numeric_cols:
-            print("No numeric columns found in correlation_with. Correlating emotions with each other.")
+    def plot_text_wordcloud(self, series, title='Word Cloud', figsize=(10, 6)):
+        
+        words = ' '.join(series.dropna().astype(str)).lower().split()
+        word_freq = Counter(words)
+        self._setup_plot(figsize=figsize)
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_confusion_matrix(self, conf_matrix, classes=None, title='Confusion Matrix', 
+                             figsize=(8, 6), cmap='Blues', normalize=False):
+        
+        self._setup_plot(figsize=figsize)
+        
+        if normalize:
+            conf_matrix = conf_matrix.astype('float') / conf_matrix.sum(axis=1)[:, np.newaxis]
+            fmt = '.2f'
+        else:
+            fmt = 'd'
+        
+        ax = sns.heatmap(conf_matrix, annot=True, fmt=fmt, cmap=cmap)
+        
+        if classes:
+            ax.set_xticklabels(classes)
+            ax.set_yticklabels(classes)
+        
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.ylabel('True Label', fontsize=13)
+        plt.xlabel('Predicted Label', fontsize=13)
+        plt.tight_layout()
+        plt.show()
+        
+    def plot_training_metrics(self, metrics, title='Training Metrics', figsize=(10, 6)):
+        
+        self._setup_plot(figsize=figsize)
+        
+        for metric_name, values in metrics.items():
+            if isinstance(values, list) and len(values) > 0:
+                plt.plot(range(1, len(values) + 1), values, marker='o', label=metric_name)
+        
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Epoch', fontsize=13)
+        plt.ylabel('Score', fontsize=13)
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_emotion_distribution(self, data, emotions=None, figsize=(10, 6), 
+                                 title='Emotion Distribution', palette='viridis', by_category=None):
+        
+        if emotions is None:
+            emotions = EMOTION_STATES
+        
+        self._setup_plot(figsize=figsize)
+        
+        if by_category is not None and by_category in data.columns:
+            emotion_counts = {}
+            categories = data[by_category].unique()
+            
+            for category in categories:
+                category_data = data[data[by_category] == category]
+                emotion_counts[category] = category_data[emotions].sum().values
+            
+            bar_width = 0.8 / len(categories)
+            r = np.arange(len(emotions))
+            
+            for i, (category, counts) in enumerate(emotion_counts.items()):
+                plt.bar(r + i * bar_width, counts, width=bar_width, 
+                       label=category, alpha=0.7)
+            
+            plt.xticks(r + bar_width * (len(categories) - 1) / 2, emotions)
+            plt.legend(title=by_category)
+            
+        else:
+            emotion_counts = data[emotions].sum().sort_values(ascending=False)
+            sns.barplot(x=emotion_counts.index, y=emotion_counts.values, palette=palette)
+        
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Emotion', fontsize=13)
+        plt.ylabel('Count', fontsize=13)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_emotion_heatmap(self, data, emotions=None, correlation_with=None, 
+                            figsize=(10, 8), cmap='coolwarm'):
+        
+        if emotions is None:
+            emotions = EMOTION_STATES
+        
+        if correlation_with is None:
             corr_matrix = data[emotions].corr()
         else:
-            # Combine emotions and numeric columns for correlation
-            corr_matrix = data[emotions + numeric_cols].corr()
-            # Subset to just show correlations between emotions and other variables
-            corr_matrix = corr_matrix.loc[emotions, numeric_cols]
-    
-    plt.figure(figsize=figsize)
-    mask = np.zeros_like(corr_matrix, dtype=bool)
-    
-    sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap=cmap, mask=mask, square=True,
-                linewidths=0.5, cbar_kws={"shrink": .8})
-    
-    plt.title('Emotion Correlation Heatmap', fontsize=16, fontweight='bold')
-    plt.tight_layout()
-    plt.show()
-
-def plot_sentiment_distribution(df, sentiment_col='sentiment', by_column=None, figsize=(10, 6), title='Sentiment Distribution'):
-    plt.figure(figsize=figsize)
-    
-    if by_column and by_column in df.columns:
-        # Create grouped barplots
-        cross_tab = pd.crosstab(df[by_column], df[sentiment_col])
-        cross_tab.plot(kind='bar', stacked=True, colormap='viridis')
-        plt.xlabel(by_column, fontsize=13)
-        plt.ylabel('Count', fontsize=13)
-    else:
-        # Simple countplot
-        value_counts = df[sentiment_col].value_counts().sort_index()
-        ax = sns.barplot(x=value_counts.index, y=value_counts.values, palette='viridis')
-        plt.xlabel('Sentiment', fontsize=13)
-        plt.ylabel('Count', fontsize=13)
+            numeric_cols = data[correlation_with].select_dtypes(include=['number']).columns.tolist()
+            if not numeric_cols:
+                print("No numeric columns found in correlation_with. Correlating emotions with each other.")
+                corr_matrix = data[emotions].corr()
+            else:
+                corr_matrix = data[emotions + numeric_cols].corr()
+                corr_matrix = corr_matrix.loc[emotions, numeric_cols]
         
-        # Add count labels
-        for p in ax.patches:
-            ax.annotate(f'{int(p.get_height())}', (p.get_x() + p.get_width() / 2., p.get_height()),
-                        ha='center', va='center', fontsize=11, color='black', xytext=(0, 8), 
-                        textcoords='offset points')
-    
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
-
-def plot_sentiment_emotion_heatmap(df, emotions=None, figsize=(10, 8), cmap='coolwarm', title='Sentiment-Emotion Correlation'):
-    if emotions is None:
-        emotions = ['anxiety', 'stress', 'confusion', 'hopeful', 'fear']
-    
-    # Create a correlation matrix
-    corr_data = pd.DataFrame()
-    
-    # Convert sentiment to numerical: negative=0, positive=1
-    corr_data['sentiment_score'] = df['sentiment'].map({'negative': 0, 'positive': 1})
-    
-    # Add emotion columns
-    for emotion in emotions:
-        if emotion in df.columns:
-            corr_data[emotion] = df[emotion]
-    
-    # Calculate correlation matrix
-    corr_matrix = corr_data.corr()
-    
-    plt.figure(figsize=figsize)
-    sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap=cmap, linewidths=0.5,
-                cbar_kws={"shrink": .8})
-    
-    # Update axis labels to show original sentiment label
-    sentiment_label = 'Sentiment\n(0=negative, 1=positive)'
-    corr_matrix.index = [sentiment_label if x == 'sentiment_score' else x for x in corr_matrix.index]
-    corr_matrix.columns = [sentiment_label if x == 'sentiment_score' else x for x in corr_matrix.columns]
-    
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.tight_layout()
-    plt.show()
-
-def plot_bert_training_progress(training_stats, figsize=(12, 5)):
-    # Extract metrics
-    stats_df = pd.DataFrame(training_stats)
-    
-    # Create a two-panel plot: training loss and validation metrics
-    plt.figure(figsize=figsize)
-    
-    # Plot training loss
-    plt.subplot(1, 2, 1)
-    plt.plot(stats_df['epoch'], stats_df['training_loss'], marker='o', linestyle='-', color='blue')
-    plt.title('Training Loss', fontsize=14, fontweight='bold')
-    plt.xlabel('Epoch', fontsize=12)
-    plt.ylabel('Loss', fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    
-    # Plot validation metrics if available
-    if 'val_accuracy' in stats_df.columns:
-        plt.subplot(1, 2, 2)
-        plt.plot(stats_df['epoch'], stats_df['val_accuracy'], marker='o', linestyle='-', label='Accuracy', color='green')
+        self._setup_plot(figsize=figsize)
+        mask = np.zeros_like(corr_matrix, dtype=bool)
         
-        if 'val_f1' in stats_df.columns:
-            plt.plot(stats_df['epoch'], stats_df['val_f1'], marker='s', linestyle='-', label='F1 Score', color='orange')
+        sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap=cmap, mask=mask, square=True,
+                    linewidths=0.5, cbar_kws={"shrink": .8})
         
-        plt.title('Validation Metrics', fontsize=14, fontweight='bold')
+        plt.title('Emotion Correlation Heatmap', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_sentiment_distribution(self, df, sentiment_col='sentiment', by_column=None, 
+                                   figsize=(10, 6), title='Sentiment Distribution'):
+        
+        self._setup_plot(figsize=figsize)
+        
+        if by_column and by_column in df.columns:
+            cross_tab = pd.crosstab(df[by_column], df[sentiment_col])
+            cross_tab.plot(kind='bar', stacked=True, colormap='viridis')
+            plt.xlabel(by_column, fontsize=13)
+            plt.ylabel('Count', fontsize=13)
+        else:
+            value_counts = df[sentiment_col].value_counts().sort_index()
+            ax = sns.barplot(x=value_counts.index, y=value_counts.values, palette='viridis')
+            plt.xlabel('Sentiment', fontsize=13)
+            plt.ylabel('Count', fontsize=13)
+            
+            for p in ax.patches:
+                ax.annotate(f'{int(p.get_height())}', 
+                           (p.get_x() + p.get_width() / 2., p.get_height()),
+                           ha='center', va='center', fontsize=11, color='black', 
+                           xytext=(0, 8), textcoords='offset points')
+        
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_sentiment_emotion_heatmap(self, df, emotions=None, figsize=(10, 8), 
+                                      cmap='coolwarm', title='Sentiment-Emotion Correlation'):
+        
+        if emotions is None:
+            emotions = EMOTION_STATES
+        
+        corr_data = pd.DataFrame()
+        corr_data['sentiment_score'] = df['sentiment'].map({'negative': 0, 'positive': 1})
+        
+        for emotion in emotions:
+            if emotion in df.columns:
+                corr_data[emotion] = df[emotion]
+        
+        corr_matrix = corr_data.corr()
+        
+        self._setup_plot(figsize=figsize)
+        sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap=cmap, linewidths=0.5,
+                    cbar_kws={"shrink": .8})
+        
+        sentiment_label = 'Sentiment\n(0=negative, 1=positive)'
+        corr_matrix.index = [sentiment_label if x == 'sentiment_score' else x for x in corr_matrix.index]
+        corr_matrix.columns = [sentiment_label if x == 'sentiment_score' else x for x in corr_matrix.columns]
+        
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_bert_training_progress(self, training_stats, figsize=(12, 5)):
+        stats_df = pd.DataFrame(training_stats)
+        
+        self._setup_plot(figsize=figsize)
+        
+        plt.subplot(1, 2, 1)
+        plt.plot(stats_df['epoch'], stats_df['training_loss'], marker='o', 
+                linestyle='-', color='blue')
+        plt.title('Training Loss', fontsize=14, fontweight='bold')
         plt.xlabel('Epoch', fontsize=12)
-        plt.ylabel('Score', fontsize=12)
-        plt.legend()
+        plt.ylabel('Loss', fontsize=12)
         plt.grid(True, linestyle='--', alpha=0.7)
-    
-    plt.tight_layout()
-    plt.show()
+        
+        if 'val_accuracy' in stats_df.columns:
+            plt.subplot(1, 2, 2)
+            plt.plot(stats_df['epoch'], stats_df['val_accuracy'], marker='o', 
+                    linestyle='-', label='Accuracy', color='green')
+            
+            if 'val_f1' in stats_df.columns:
+                plt.plot(stats_df['epoch'], stats_df['val_f1'], marker='s', 
+                        linestyle='-', label='F1 Score', color='orange')
+            
+            plt.title('Validation Metrics', fontsize=14, fontweight='bold')
+            plt.xlabel('Epoch', fontsize=12)
+            plt.ylabel('Score', fontsize=12)
+            plt.legend()
+            plt.grid(True, linestyle='--', alpha=0.7)
+        
+        plt.tight_layout()
+        plt.show()
 
-def plot_emotion_by_sentiment(df, emotions=None, figsize=(12, 8), title='Emotions by Sentiment'):
-    if emotions is None:
-        emotions = ['anxiety', 'stress', 'confusion', 'hopeful', 'fear']
-    
-    plt.figure(figsize=figsize)
-    
-    # Group by sentiment and calculate emotion means
-    grouped = df.groupby('sentiment_label')[emotions].mean()
-    
-    # Plot as a heatmap
-    sns.heatmap(grouped, annot=True, fmt=".2f", cmap='viridis', linewidths=0.5)
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.xlabel('Emotion', fontsize=13)
-    plt.ylabel('Sentiment', fontsize=13)
-    plt.tight_layout()
-    plt.show()
+    def plot_emotion_by_sentiment(self, df, emotions=None, figsize=(12, 8), 
+                                 title='Emotions by Sentiment'):
+        
+        if emotions is None:
+            emotions = ['anxiety', 'stress', 'confusion', 'hopeful', 'fear']
+        
+        self._setup_plot(figsize=figsize)
+        
+        if not set(emotions).issubset(df.columns):
+            for emo in emotions:
+                df[emo] = df['emotions_detected'].apply(
+                    lambda d: 1 if isinstance(d, dict) and d.get(emo) else 0
+                )
+        group_col = 'sentiment_label' if 'sentiment_label' in df.columns else 'sentiment'
+        grouped = df.groupby(group_col)[emotions].mean()
+        
+        sns.heatmap(grouped, annot=True, fmt=".2f", cmap='viridis', linewidths=0.5)
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Emotion', fontsize=13)
+        plt.ylabel('Sentiment', fontsize=13)
+        plt.tight_layout()
+        plt.show()
 
-def plot_sentiment_confidence(df, figsize=(10, 6), title='Sentiment Prediction Confidence'):
-    if 'confidence' not in df.columns:
-        print("No confidence scores available to plot")
-        return
-    
-    plt.figure(figsize=figsize)
-    
-    # Group by sentiment label
-    grouped = df.groupby('sentiment_label')['confidence'].mean().reset_index()
-    
-    # Plot as a bar chart
-    sns.barplot(x='sentiment_label', y='confidence', data=grouped, palette='viridis')
-    plt.title(title, fontsize=16, fontweight='bold')
-    plt.xlabel('Sentiment', fontsize=13)
-    plt.ylabel('Average Confidence Score', fontsize=13)
-    plt.ylim(0, 1)  # Confidence scores should be between 0 and 1
-    plt.tight_layout()
-    plt.show()
+    def plot_sentiment_confidence(self, df, figsize=(10, 6), 
+                                 title='Sentiment Prediction Confidence'):
+        
+        if 'confidence' not in df.columns:
+            print("No confidence scores available to plot")
+            return
+        
+        self._setup_plot(figsize=figsize)
+        
+        grouped = df.groupby('sentiment_label')['confidence'].mean().reset_index()
+        
+        sns.barplot(x='sentiment_label', y='confidence', data=grouped, palette='viridis')
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Sentiment', fontsize=13)
+        plt.ylabel('Average Confidence Score', fontsize=13)
+        plt.ylim(0, 1)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_noshow_rates_by_sentiment(self, noshow_by_sentiment, title='No-Show Rate by Sentiment', 
+                                      figsize=(10, 6), palette='viridis'):
+        
+        self._setup_plot(figsize=figsize)
+        sns.barplot(x=noshow_by_sentiment.index, y=noshow_by_sentiment.values, palette=palette)
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Sentiment', fontsize=13)
+        plt.ylabel('No-Show Rate', fontsize=13)
+        plt.ylim(0, 1)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_noshow_rates_by_emotion(self, noshow_by_emotion, title='No-Show Rate by Emotion', 
+                                    figsize=(12, 6), palette='viridis'):
+        
+        self._setup_plot(figsize=figsize)
+        sns.barplot(x=noshow_by_emotion.index, y=noshow_by_emotion.values, palette=palette)
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Emotion', fontsize=13)
+        plt.ylabel('No-Show Rate', fontsize=13)
+        plt.xticks(rotation=45)
+        plt.ylim(0, 1)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_sentiment_noshow_analysis(self, analysis_results, figsize=(15, 10)):
+        self._setup_plot(figsize=figsize)
+        
+        # Plot no-show rates by sentiment
+        plt.subplot(2, 2, 1)
+        noshow_by_sentiment = analysis_results['noshow_by_sentiment']
+        sns.barplot(x=noshow_by_sentiment.index, y=noshow_by_sentiment.values, palette='viridis')
+        plt.title('No-Show Rate by Sentiment', fontsize=14, fontweight='bold')
+        plt.xlabel('Sentiment', fontsize=12)
+        plt.ylabel('No-Show Rate', fontsize=12)
+        plt.ylim(0, 1)
+        
+        # Plot no-show rates by emotion
+        plt.subplot(2, 2, 2)
+        noshow_by_emotion = analysis_results['noshow_by_emotion']
+        sns.barplot(x=noshow_by_emotion.index, y=noshow_by_emotion.values, palette='viridis')
+        plt.title('No-Show Rate by Dominant Emotion', fontsize=14, fontweight='bold')
+        plt.xlabel('Dominant Emotion', fontsize=12)
+        plt.ylabel('No-Show Rate', fontsize=12)
+        plt.xticks(rotation=45)
+        plt.ylim(0, 1)
+        
+        # Plot sentiment-emotion heatmap
+        plt.subplot(2, 2, 3)
+        sentiment_emotion_cross = analysis_results['sentiment_emotion_cross']
+        sns.heatmap(sentiment_emotion_cross, annot=True, fmt='d', cmap='viridis')
+        plt.title('Sentiment-Emotion Distribution', fontsize=14, fontweight='bold')
+        plt.xlabel('Emotion', fontsize=12)
+        plt.ylabel('Sentiment', fontsize=12)
+        
+        # Plot sentiment-emotion no-show rates
+        plt.subplot(2, 2, 4)
+        sentiment_emotion_noshow = analysis_results['sentiment_emotion_noshow']
+        sns.heatmap(sentiment_emotion_noshow, annot=True, fmt='.2f', cmap='viridis')
+        plt.title('No-Show Rate by Sentiment-Emotion', fontsize=14, fontweight='bold')
+        plt.xlabel('Emotion', fontsize=12)
+        plt.ylabel('Sentiment', fontsize=12)
+        
+        plt.tight_layout()
+        plt.show()
+
+    def plot_reason_categories(self, data, category_column='reason_category', 
+                              title='No-Show Reason Categories', figsize=(10, 6), palette='viridis'):
+        
+        self._setup_plot(figsize=figsize)
+        
+        category_counts = data[category_column].value_counts().sort_values(ascending=False)
+        
+        ax = sns.barplot(x=category_counts.index, y=category_counts.values, palette=palette)
+        
+        for p in ax.patches:
+            ax.annotate(f'{int(p.get_height())}', 
+                       (p.get_x() + p.get_width() / 2., p.get_height()),
+                       ha='center', va='center', fontsize=11, color='black', 
+                       xytext=(0, 8), textcoords='offset points')
+        
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Reason Category', fontsize=13)
+        plt.ylabel('Count', fontsize=13)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_reason_category_wordclouds(self, data, reason_column='NoShowReason', 
+                                       category_column='reason_category', 
+                                       title_prefix='Word Cloud for', figsize=(8, 5)):
+        
+        categories = data[category_column].unique()
+        
+        for category in categories:
+            category_reasons = data[data[category_column] == category][reason_column]
+            if len(category_reasons) > 0:
+                self.plot_text_wordcloud(
+                    series=category_reasons,
+                    title=f'{title_prefix} {category.title()} Category',
+                    figsize=figsize
+                )
+
+    def plot_category_emotion_relationship(self, data, category_column='reason_category', 
+                                         emotion_column='dominant_emotion',
+                                         title='Relationship Between Reason Categories and Emotions', 
+                                         figsize=(12, 8), cmap='viridis'):
+        
+        if emotion_column not in data.columns:
+            print(f"Column '{emotion_column}' not found in the data.")
+            return
+        
+        category_emotion_counts = pd.crosstab(data[category_column], data[emotion_column])
+        
+        self._setup_plot(figsize=figsize)
+        sns.heatmap(category_emotion_counts, annot=True, fmt='d', cmap=cmap)
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Emotion', fontsize=13)
+        plt.ylabel('Reason Category', fontsize=13)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_sentiment_analysis_dashboard(self, sentiment_results, figsize=(15, 10)):
+        self._setup_plot(figsize=figsize)
+        
+        # Plot sentiment distribution
+        plt.subplot(2, 2, 1)
+        self.plot_sentiment_distribution(sentiment_results)
+        
+        # Plot emotion by sentiment
+        plt.subplot(2, 2, 2)
+        self.plot_emotion_by_sentiment(sentiment_results)
+        
+        # Plot sentiment confidence
+        plt.subplot(2, 2, 3)
+        self.plot_sentiment_confidence(sentiment_results)
+        
+        # Plot sentiment-emotion heatmap
+        plt.subplot(2, 2, 4)
+        self.plot_sentiment_emotion_heatmap(sentiment_results)
+        
+        plt.tight_layout()
+        plt.show()
+
+    def plot_tfidf_feature_importance(self, model, feature_names, top_n=20, 
+                                     title='Top TF-IDF Features', figsize=(12, 10)):
+        
+        if not hasattr(model, 'coef_'):
+            print("Model does not have 'coef_' attribute. Cannot plot feature importance.")
+            return
+        
+        coefficients = model.coef_[0]
+        
+        feature_importance = pd.DataFrame({
+            'Feature': feature_names,
+            'Importance': np.abs(coefficients)
+        })
+        
+        feature_importance = feature_importance.sort_values('Importance', ascending=False).head(top_n)
+        
+        self._setup_plot(figsize=figsize)
+        sns.barplot(x='Importance', y='Feature', data=feature_importance, palette='viridis')
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel('Coefficient Magnitude', fontsize=14)
+        plt.ylabel('Feature', fontsize=14)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_tfidf_analysis_dashboard(self, analysis_results, figsize=(15, 12)):
+        required_keys = ['model', 'classification_report', 'confusion_matrix', 'feature_names']
+        missing_keys = [key for key in required_keys if key not in analysis_results]
+        
+        if missing_keys:
+            print(f"Missing required keys in analysis_results: {', '.join(missing_keys)}")
+            return
+        
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        plt.subplots_adjust(hspace=0.4, wspace=0.4)
+        
+        # 1. Plot confusion matrix
+        conf_matrix = analysis_results['confusion_matrix']
+        sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', ax=axes[0, 0])
+        axes[0, 0].set_title('Confusion Matrix', fontsize=14, fontweight='bold')
+        axes[0, 0].set_xlabel('Predicted', fontsize=12)
+        axes[0, 0].set_ylabel('Actual', fontsize=12)
+        
+        # 2. Plot classification metrics
+        metrics = analysis_results['classification_report']
+        class_metrics = {
+            'Class': [], 'Precision': [], 'Recall': [], 'F1-Score': [], 'Support': []
+        }
+        
+        for class_label, values in metrics.items():
+            if class_label in ['accuracy', 'macro avg', 'weighted avg']:
+                continue
+            class_metrics['Class'].append(str(class_label))
+            class_metrics['Precision'].append(values['precision'])
+            class_metrics['Recall'].append(values['recall'])
+            class_metrics['F1-Score'].append(values['f1-score'])
+            class_metrics['Support'].append(values['support'])
+        
+        metrics_df = pd.DataFrame(class_metrics)
+        metrics_df = metrics_df.melt(
+            id_vars=['Class', 'Support'], 
+            value_vars=['Precision', 'Recall', 'F1-Score'],
+            var_name='Metric', value_name='Value'
+        )
+        
+        sns.barplot(x='Class', y='Value', hue='Metric', data=metrics_df, ax=axes[0, 1])
+        axes[0, 1].set_title('Classification Metrics by Class', fontsize=14, fontweight='bold')
+        axes[0, 1].set_ylim(0, 1.0)
+        axes[0, 1].set_xlabel('Class', fontsize=12)
+        axes[0, 1].set_ylabel('Score', fontsize=12)
+        
+        # 3. Plot feature importance
+        feature_importance = pd.DataFrame({
+            'Feature': analysis_results['feature_names'],
+            'Importance': np.abs(analysis_results['model'].coef_[0])
+        })
+        
+        feature_importance = feature_importance.sort_values('Importance', ascending=False).head(10)
+        
+        sns.barplot(x='Importance', y='Feature', data=feature_importance,
+                   palette='viridis', ax=axes[1, 0])
+        axes[1, 0].set_title('Top 10 Features by Importance', fontsize=14, fontweight='bold')
+        axes[1, 0].set_xlabel('Coefficient Magnitude', fontsize=12)
+        axes[1, 0].set_ylabel('Feature', fontsize=12)
+        
+        # 4. Plot overall accuracy
+        accuracy = metrics['accuracy'] if 'accuracy' in metrics else analysis_results.get('accuracy', 0)
+        
+        axes[1, 1].bar(['Accuracy'], [accuracy], color='teal', alpha=0.7)
+        axes[1, 1].set_title('Overall Accuracy', fontsize=14, fontweight='bold')
+        axes[1, 1].set_ylim(0, 1.0)
+        axes[1, 1].set_ylabel('Score', fontsize=12)
+        axes[1, 1].text(0, accuracy / 2, f'{accuracy:.4f}', ha='center', va='center', 
+                       fontsize=14, fontweight='bold', color='white')
+        
+        fig.suptitle('TF-IDF and Logistic Regression Analysis Dashboard', 
+                    fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.9)
+        plt.show()
+
+    def plot_reason_analysis_dashboard(self, analysis_results, category_map=None, figsize=(15, 12)):
+        test_metrics = analysis_results.get('test_metrics', {})
+        training_stats = analysis_results.get('training_stats', [])
+        
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        plt.subplots_adjust(hspace=0.4, wspace=0.4)
+        
+        # 1. Plot confusion matrix if available
+        if 'confusion_matrix' in test_metrics:
+            conf_matrix = test_metrics['confusion_matrix']
+            
+            if category_map:
+                labels = [category_map.get(i, f"Category {i}") for i in range(len(category_map))]
+            else:
+                labels = [f"Category {i}" for i in range(conf_matrix.shape[0])]
+            
+            sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues',
+                       xticklabels=labels, yticklabels=labels, ax=axes[0, 0])
+            axes[0, 0].set_title('Confusion Matrix', fontsize=14, fontweight='bold')
+            axes[0, 0].set_xlabel('Predicted', fontsize=12)
+            axes[0, 0].set_ylabel('Actual', fontsize=12)
+        else:
+            axes[0, 0].text(0.5, 0.5, "Confusion Matrix Not Available", 
+                           ha='center', va='center', fontsize=14)
+            axes[0, 0].axis('off')
+        
+        # 2. Plot training metrics if available
+        if training_stats and isinstance(training_stats, list):
+            train_loss = [stat.get('loss', 0) for stat in training_stats]
+            val_acc = [stat.get('accuracy', 0) for stat in training_stats]
+            epochs = range(1, len(train_loss) + 1)
+            
+            ax2 = axes[0, 1]
+            ax2.plot(epochs, train_loss, 'b-', label='Training Loss')
+            ax2.set_title('Training Metrics', fontsize=14, fontweight='bold')
+            ax2.set_xlabel('Epoch', fontsize=12)
+            ax2.set_ylabel('Loss', fontsize=12, color='b')
+            ax2.tick_params(axis='y', labelcolor='b')
+            
+            ax2b = ax2.twinx()
+            ax2b.plot(epochs, val_acc, 'r-', label='Validation Accuracy')
+            ax2b.set_ylabel('Accuracy', fontsize=12, color='r')
+            ax2b.tick_params(axis='y', labelcolor='r')
+            
+            lines1, labels1 = ax2.get_legend_handles_labels()
+            lines2, labels2 = ax2b.get_legend_handles_labels()
+            ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper center')
+        else:
+            axes[0, 1].text(0.5, 0.5, "Training Metrics Not Available", 
+                           ha='center', va='center', fontsize=14)
+            axes[0, 1].axis('off')
+        
+        # 3. Plot classification metrics if available
+        if 'classification_report' in test_metrics:
+            metrics = test_metrics['classification_report']
+            class_metrics = {
+                'Class': [], 'Precision': [], 'Recall': [], 'F1-Score': [], 'Support': []
+            }
+            
+            for class_label, values in metrics.items():
+                if class_label in ['accuracy', 'macro avg', 'weighted avg']:
+                    continue
+                
+                if category_map and int(class_label) in category_map:
+                    class_name = category_map[int(class_label)]
+                else:
+                    class_name = f"Category {class_label}"
+                    
+                class_metrics['Class'].append(class_name)
+                class_metrics['Precision'].append(values['precision'])
+                class_metrics['Recall'].append(values['recall'])
+                class_metrics['F1-Score'].append(values['f1-score'])
+                class_metrics['Support'].append(values['support'])
+            
+            metrics_df = pd.DataFrame(class_metrics)
+            
+            if not metrics_df.empty:
+                metrics_df = metrics_df.melt(
+                    id_vars=['Class', 'Support'], 
+                    value_vars=['Precision', 'Recall', 'F1-Score'],
+                    var_name='Metric', value_name='Value'
+                )
+                
+                sns.barplot(x='Class', y='Value', hue='Metric', data=metrics_df, ax=axes[1, 0])
+                axes[1, 0].set_title('Classification Metrics by Class', fontsize=14, fontweight='bold')
+                axes[1, 0].set_ylim(0, 1.0)
+                axes[1, 0].set_xlabel('Class', fontsize=12)
+                axes[1, 0].set_ylabel('Score', fontsize=12)
+                if len(class_metrics['Class']) > 3:
+                    plt.setp(axes[1, 0].get_xticklabels(), rotation=45, ha='right')
+            else:
+                axes[1, 0].text(0.5, 0.5, "Classification Metrics Not Available", 
+                              ha='center', va='center', fontsize=14)
+                axes[1, 0].axis('off')
+        else:
+            axes[1, 0].text(0.5, 0.5, "Classification Metrics Not Available", 
+                           ha='center', va='center', fontsize=14)
+            axes[1, 0].axis('off')
+        
+        # 4. Plot overall accuracy
+        accuracy = test_metrics.get('accuracy', 0)
+        f1_score = test_metrics.get('f1', 0)
+        
+        metrics_names = ['Accuracy', 'F1 Score']
+        metrics_values = [accuracy, f1_score]
+        
+        axes[1, 1].bar(metrics_names, metrics_values, color=['teal', 'coral'], alpha=0.7)
+        axes[1, 1].set_title('Overall Metrics', fontsize=14, fontweight='bold')
+        axes[1, 1].set_ylim(0, 1.0)
+        axes[1, 1].set_ylabel('Score', fontsize=12)
+        
+        for i, v in enumerate(metrics_values):
+            axes[1, 1].text(i, v / 2, f'{v:.4f}', ha='center', va='center', 
+                           fontsize=14, fontweight='bold', color='white')
+        
+        fig.suptitle('No-Show Reason Analysis Dashboard', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.9)
+        plt.show()
+
+    def print_sentiment_metrics(self, metrics):
+        print('Model Accuracy by Emotion:')
+        for emotion, acc in metrics['emotion_accuracies'].items():
+            print(f"  {emotion}: {acc:.4f}")
+        print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.4f}")
+        print('\nClassification Reports:')
+        for emotion, report in metrics['classification_reports'].items():
+            print(f"\n{emotion.capitalize()}:")
+            if report.get('note'):
+                print(report['note'])
+            if report.get('classification_report'):
+                for label, scores in report['classification_report'].items():
+                    if isinstance(scores, dict):
+                        print(f"  {label}: {scores}")
+
+    def plot_accuracy_by_emotion(self, metrics, figsize=(10, 6)):
+        emotions = list(metrics['emotion_accuracies'].keys())
+        accuracies = list(metrics['emotion_accuracies'].values())
+        overall_acc = metrics['overall_accuracy']
+        plt.figure(figsize=figsize)
+        sns.barplot(x=emotions, y=accuracies, palette='viridis')
+        plt.axhline(overall_acc, color='red', linestyle='--', label=f'Overall Accuracy: {overall_acc:.2f}')
+        plt.title('Model Accuracy by Emotion')
+        plt.xlabel('Emotion')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_confusion_matrices(self, actual_labels, predictions, emotions, figsize=(16, 3)):
+        n = len(emotions)
+        cols = min(n, 5)
+        rows = (n + cols - 1) // cols
+        fig, axes = plt.subplots(rows, cols, figsize=(figsize[0], rows * figsize[1]))
+        axes = np.array(axes).reshape(-1)
+        for i, emotion in enumerate(emotions):
+            cm = confusion_matrix(actual_labels[:, i], predictions[:, i])
+            ax = axes[i]
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, ax=ax)
+            ax.set_title(f'{emotion.capitalize()}')
+            ax.set_xlabel('Predicted')
+            ax.set_ylabel('Actual')
+        # Hide any unused subplots
+        for j in range(i + 1, len(axes)):
+            axes[j].axis('off')
+        plt.suptitle('Confusion Matrices by Emotion', fontsize=16, fontweight='bold')
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.show()
+
+    def plot_training_validation_loss(self, training_losses, validation_losses, figsize=(8, 5)):
+        plt.figure(figsize=figsize)
+        plt.plot(training_losses, label='Training Loss', marker='o')
+        plt.plot(validation_losses, label='Validation Loss', marker='o')
+        plt.title('Training and Validation Loss per Epoch')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_epoch_times(self, epoch_times, figsize=(8, 5)):
+        plt.figure(figsize=figsize)
+        plt.plot(epoch_times, marker='o')
+        plt.title('Time Taken per Epoch (seconds)')
+        plt.xlabel('Epoch')
+        plt.ylabel('Time (s)')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_roc_auc_by_emotion(self, actual_labels, predictions, emotion_states, figsize=(10, 8)):
+        plt.figure(figsize=figsize)
+        for idx, emotion in enumerate(emotion_states):
+            fpr, tpr, _ = roc_curve(actual_labels[:, idx], predictions[:, idx])
+            roc_auc = auc(fpr, tpr)
+            plt.plot(fpr, tpr, lw=2, label=f'{emotion} (AUC = {roc_auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curves for Each Emotion')
+        plt.legend(loc='lower right')
+        plt.show()
