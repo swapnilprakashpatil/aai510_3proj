@@ -8,6 +8,21 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
+# Configuration settings for the Patient Appointments Show/No Show Prediction and Analysis project
+RUN_CONFIGURATION = [
+    { 'step': 'dataload', 'enabled': True },
+    { 'step': 'data_preprocess', 'enabled': True },
+    { 'step': 'eda', 'enabled': False },
+    { 'step': 'supervised_logistic_regression', 'enabled': False },
+    { 'step': 'supervised_random_forest', 'enabled': True },
+    { 'step': 'unsupervised_pca', 'enabled': True },
+    { 'step': 'unsupervised_kmeans', 'enabled': True },
+    { 'step': 'unsupervised_gmm', 'enabled': True },
+    { 'step': 'nlp_sentiment_analysis', 'enabled': False },
+    { 'step': 'nlp_noshow_prediction', 'enabled': True },
+    { 'step': 'nlp_topic_modeling', 'enabled': True }
+]
+
 # Base directory of the project
 BASE_DIR = project_root
 
@@ -106,45 +121,26 @@ NLP_CONFIG = {
     'label_id_mapping': {'negative': 0, 'positive': 1}
 }
 
-# Sentiment keywords for NLP pipeline
-SENTIMENT_KEYWORDS = {
-    'negative': [
-        'worried', 'concerned', 'anxious', 'afraid', 'scared', 'nervous',
-        'frustrated', 'annoyed', 'upset', 'angry', 'painful', 'worse', 'difficult',
-        'problem', 'issue', 'too long', 'not sure', 'not working', 'not helping'
-    ],
-    'positive': [
-        'looking forward', 'better', 'improved', 'helpful', 'kind', 'good', 
-        'great', 'excellent', 'effective', 'happy', 'pleased', 'satisfied',
-        'impressed', 'comfortable', 'confident', 'hopeful'
-    ]
-}
-
-# Calibration examples for sentiment analysis
-SENTIMENT_CALIBRATION_EXAMPLES = {
-    'texts': [
-        "I'm looking forward to my appointment next week",
-        "The doctor explained everything clearly and I feel informed",
-        "The treatment has been helping me feel better",
-        "I appreciate the care I received during my hospital stay",
-        "The new medication seems to be working well for me",
-        "I'm worried about my test results",
-        "The waiting time was too long and frustrating",
-        "I'm not sure if the medication is working",
-        "The pain has been getting worse after the procedure",
-        "I felt rushed during my appointment and didn't get to ask all my questions"
-    ],
-    'labels': [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]  # 1=positive, 0=negative
-}
-
 # Hyperparameters for models (example)
 HYPERPARAMETERS = {
     'tinybert': [
         {'learning_rate': 5e-5, 'batch_size': 16, 'epochs': 2, 'patience': 1, 'accumulation_steps': 4},
         {'learning_rate': 1e-4, 'batch_size': 16, 'epochs': 2, 'patience': 1, 'accumulation_steps': 4},
+    ],
+    'tiny_clinicalbert': [
+        {
+            "model_name": "emilyalsentzer/Bio_ClinicalBERT",
+            "max_length": 128,
+            "epochs": 3,
+            "batch_size": 8,
+            "learning_rate": 2e-5
+        }
     ]
 }
 
 # Model export paths for sentiment analysis
 SENTIMENT_MODEL_EXPORT_PATH_RAW = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_raw')
 SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_optimized')
+
+def is_step_enabled(step_name):
+    return any(step for step in RUN_CONFIGURATION if step['step'] == step_name and step['enabled'] is True)

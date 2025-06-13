@@ -1,23 +1,17 @@
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import warnings
 import time as time_module  # Renamed to prevent variable shadowing
-import psutil
-import threading
-import itertools
 import os
 import platform
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.metrics import classification_report, accuracy_score
 from transformers import get_linear_schedule_with_warmup, AutoConfig
 from torch.optim import AdamW
 from tqdm import tqdm
-from src.config import RANDOM_STATE, EMOTION_STATES, MODEL_NAMES, NLP_CONFIG, HYPERPARAMETERS
+from src.config import RANDOM_STATE, EMOTION_STATES, NLP_CONFIG, HYPERPARAMETERS
 from src.emotion_postprocessor import EmotionPostProcessor
 
 warnings.filterwarnings("ignore")

@@ -16,7 +16,10 @@ st.title("Patient Sentiment Emotion Analyzer")
 
 # Sidebar: Model selection (for now, only TinyBERT)
 st.sidebar.title("Model Selection")
-model_options = ["Sentiment Analysis (TinyBERT)"]
+model_options = [
+    "Sentiment Analysis (TinyBERT)",
+    "Clinical Notes Analysis (TinyClinicalBERT)"
+]
 selected_model = st.sidebar.selectbox("Choose a model:", model_options)
 
 # Example patient sentiment notes (from app.py)
@@ -26,6 +29,14 @@ examples = [
     "Elderly patient expresses fear of declining health, confusion about medications, and stress related to mobility issues.",
     "Patient (minor) is anxious and fearful about medical procedures, sometimes confused by instructions, and stressed by separation from family.",
     "Patient expresses confusion about medication schedule and is hopeful about recovery."
+]
+
+# Clinical notes examples
+clinical_examples = [
+    "Patient is alert and oriented, no acute distress.",
+    "Signs of infection and abnormal chest x-ray findings.",
+    "Patient is stable and shows no signs of infection.",
+    "There is evidence of pneumonia in the left lung."
 ]
 
 # Text input area with example buttons
@@ -95,27 +106,58 @@ def predict_emotions_raw(text, model, tokenizer, device):
     results = {emo: bool(probs[i] >= 0.5) for i, emo in enumerate(emotion_labels)}
     return results, probs
 
+if selected_model == "Clinical Notes Analysis (TinyClinicalBERT)":
+    from clinical_notes_prediction import ClinicalNotesAnalysis
+    from src.config import CLINICAL_CONFIG, CLINICAL_LABELS
+    import warnings
+    warnings.filterwarnings("ignore")
+    @st.cache_resource
+    def load_clinical_model():
+        return ClinicalNotesAnalysis(CLINICAL_CONFIG)
+    clinical_model = load_clinical_model()
+
+    def predict_clinical(text):
+        preds = clinical_model.predict([text])
+        return preds[0]
+
 # Analyse button
 def show_results():
     if input_text:
-        model, tokenizer, device = load_tinybert_model()
-        with st.spinner("Analyzing emotions..."):
-            results, probs = predict_emotions_raw(input_text, model, tokenizer, device)
-        st.subheader("Detected Emotions")
-        detected = [f"{emotion_emojis[emo]} {emo.capitalize()}" for emo, present in results.items() if present]
-        if detected:
-            st.success(f"Detected: {', '.join(detected)}")
+        if selected_model == "Sentiment Analysis (TinyBERT)":
+            model, tokenizer, device = load_tinybert_model()
+            with st.spinner("Analyzing emotions..."):
+                results, probs = predict_emotions_raw(input_text, model, tokenizer, device)
+            st.subheader("Detected Emotions")
+            detected = [f"{emotion_emojis[emo]} {emo.capitalize()}" for emo, present in results.items() if present]
+            if detected:
+                st.success(f"Detected: {', '.join(detected)}")
+            else:
+                st.info("No significant emotions detected.")
+            # Show bar chart of probabilities
+            chart_data = pd.DataFrame({
+                'Emotion': [f"{emotion_emojis[emo]} {emo.capitalize()}" for emo in emotion_labels],
+                'Probability': probs
+            })
+            chart_data = chart_data.sort_values('Probability', ascending=False)
+            st.bar_chart(chart_data.set_index('Emotion'))
         else:
-            st.info("No significant emotions detected.")
-        # Show bar chart of probabilities
-        chart_data = pd.DataFrame({
-            'Emotion': [f"{emotion_emojis[emo]} {emo.capitalize()}" for emo in emotion_labels],
-            'Probability': probs
-        })
-        chart_data = chart_data.sort_values('Probability', ascending=False)
-        st.bar_chart(chart_data.set_index('Emotion'))
+            with st.spinner("Analyzing clinical note..."):
+                pred = predict_clinical(input_text)
+            st.subheader("Clinical Note Prediction")
+            st.success(f"Predicted Label: {pred}")
     else:
         st.warning("Please enter some text to analyze.")
 
 if st.button("Analyze Patient Sentiment", type="primary"):
     show_results()
+
+if selected_model == "Sentiment Analysis (TinyBERT)":
+    examples = [
+        "Patient is hopeful and shows no significant anxiety, stress, or fear related to health conditions.",
+        "Patient expresses fear and anxiety about high blood pressure and possible complications.",
+        "Elderly patient expresses fear of declining health, confusion about medications, and stress related to mobility issues.",
+        "Patient (minor) is anxious and fearful about medical procedures, sometimes confused by instructions, and stressed by separation from family.",
+        "Patient expresses confusion about medication schedule and is hopeful about recovery."
+    ]
+else:
+    examples = clinical_examples
