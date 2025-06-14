@@ -12,3 +12,7 @@ __pycache__/
 results/
 logs/
 .venv/
+models/nlp/prediction/checkpoint-10/
+models/nlp/prediction/checkpoint-40/
+*.pt
+*.safetensors

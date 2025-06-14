@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='patient_appointment_analysis',
     version='0.1.0',
-    author='Your Name',
+    author='Swapnil Patil, Kevin Hooman, Keith Holder',
     author_email='spatil@sandiego.edu',
     description='A project for predicting and analyzing patient appointments show/no show outcomes.',
     packages=find_packages(where='src'),

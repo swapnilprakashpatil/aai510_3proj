@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 from collections import Counter
 from typing import Optional, Tuple
-from config import EMOTION_STATES
+from src.config import EMOTION_STATES
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 
 class PlotGenerator:
@@ -857,6 +857,7 @@ class PlotGenerator:
         plt.legend(loc='lower right')
         plt.show()
 
+    @staticmethod
     def plot_accuracy(y_true, y_pred):
         from sklearn.metrics import accuracy_score
         acc = accuracy_score(y_true, y_pred)
@@ -867,6 +868,7 @@ class PlotGenerator:
         plt.ylabel('Accuracy')
         plt.show()
 
+    @staticmethod
     def plot_confusion_matrix(y_true, y_pred):
         from sklearn.metrics import confusion_matrix
         cm = confusion_matrix(y_true, y_pred)
@@ -877,6 +879,7 @@ class PlotGenerator:
         plt.ylabel('Actual')
         plt.show()
 
+    @staticmethod
     def plot_roc_auc(y_true, y_score):
         from sklearn.metrics import roc_curve, auc
         fpr, tpr, _ = roc_curve(y_true, y_score)

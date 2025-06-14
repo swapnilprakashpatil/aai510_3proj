@@ -113,6 +113,9 @@ NLP_CONFIG = {
     'weight_decay': 0.01,
     'epochs': 3,
     'warmup_ratio': 0.1,
+    'eval_steps': 10,  # now configurable
+    'save_steps': 10,  # now configurable
+    'logging_steps': 10,  # now configurable
     'sentiment_threshold': 0.55,  # Threshold for positive sentiment prediction
     'temperature': 1.2,  # Temperature for softening predictions
     'num_labels': 2,  # Binary sentiment: negative/positive
@@ -129,7 +132,7 @@ HYPERPARAMETERS = {
     ],
     'tiny_clinicalbert': [
         {
-            "model_name": "emilyalsentzer/Bio_ClinicalBERT",
+            "model_name": 'nlpie/tiny-clinicalbert',
             "max_length": 128,
             "epochs": 3,
             "batch_size": 8,
@@ -141,6 +144,8 @@ HYPERPARAMETERS = {
 # Model export paths for sentiment analysis
 SENTIMENT_MODEL_EXPORT_PATH_RAW = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_raw')
 SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_optimized')
+
+PREDICTION_MODEL_EXPORT_PATH = os.path.join(NLP_MODEL_DIR, 'prediction')
 
 def is_step_enabled(step_name):
     return any(step for step in RUN_CONFIGURATION if step['step'] == step_name and step['enabled'] is True)
