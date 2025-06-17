@@ -1,17 +1,3 @@
-no_show,sms_reason
-yes,"The patient received an SMS reminder but was still unable to attend due to unforeseen circumstances."
-yes,"Despite receiving an SMS notification, the patient forgot the appointment amidst a busy schedule."
-yes,"The patient acknowledged the SMS reminder but faced a last-minute conflict that prevented attendance."
-yes,"The patient saw the SMS reminder but was unable to arrange transportation in time."
-yes,"The patient received the SMS but was feeling unwell on the day of the appointment."
-yes,"The patient received the SMS but misunderstood the appointment time or location."
-yes,"The patient received the SMS but had already decided not to attend due to personal reasons."
-yes,"The patient received the SMS but a family emergency arose unexpectedly."
-no,"The patient attended the appointment after receiving a helpful SMS reminder from the clinic."
-no,"The SMS notification prompted the patient to arrange transportation and adjust their schedule to attend."
-no,"The patient credits the SMS reminder for remembering the appointment and arriving on time."
-no,"The patient found the SMS reminder useful for planning ahead and avoiding scheduling conflicts."
-no,"The patient confirmed the appointment after receiving the SMS and set a calendar alert as a backup."
-no,"The patient was motivated to attend after receiving the SMS notification from the clinic."
-no,"The patient appreciated the clear instructions in the SMS reminder, which helped avoid confusion."
-no,"The patient attended the appointment to avoid rescheduling after receiving the SMS reminder."
+version https://git-lfs.github.com/spec/v1
+oid sha256:fa3a8157037d25889247bc04861e9af589876e050974a2bde0110008cc5ddfb2
+size 1602
