@@ -42,6 +42,7 @@ OUTPUT_PATH = os.path.join(DATA_DIR, 'dataset.csv')
 DATASET_PATH = os.path.join(DATA_DIR, 'dataset.csv')
 EMOTION_VARIATIONS_PATH = os.path.join(DATA_DIR, 'emotion_variations.csv')
 NEGATION_PATTERNS_PATH = os.path.join(DATA_DIR, 'negation_patterns.csv')
+CLINICAL_TERMS_RULES_PATH = os.path.join(os.path.dirname(__file__), '../data/synthetic_reasons/clinical_terms_rules.csv')
 
 # General configurations
 RANDOM_STATE = 42

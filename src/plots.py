@@ -908,3 +908,25 @@ class PlotGenerator:
         plt.title('Training and Validation Loss')
         plt.legend()
         plt.show()
+
+    def plot_wordclouds(self, lda_model, vectorizer, condition):
+        for idx, topic in enumerate(lda_model.components_):
+            self._setup_plot(figsize=(6, 4))
+            word_freq = {vectorizer.get_feature_names_out()[i]: topic[i] for i in topic.argsort()[:-21:-1]}
+            wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.axis('off')
+            plt.title(f'{condition} - Topic {idx+1}')
+            plt.tight_layout()
+            plt.show()
+
+    def plot_bar(self, x, y, title='', ylabel='', xlabel='', figsize=(8, 5), color='skyblue'):
+        self._setup_plot(figsize=figsize)
+        plt.bar(x, y, color=color)
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.xlabel(xlabel or 'Category', fontsize=13)
+        plt.ylabel(ylabel or 'Value', fontsize=13)
+        plt.xticks(fontsize=11, rotation=45, ha='right')
+        plt.yticks(fontsize=11)
+        plt.tight_layout()
+        plt.show()

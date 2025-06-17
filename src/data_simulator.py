@@ -3,7 +3,6 @@
 import pandas as pd
 import random
 import os
-import ast
 import csv
 
 class DataSimulator:
@@ -17,8 +16,10 @@ class DataSimulator:
         self.gender_based_reasons = self._load_gender_based_reasons()
         self.sms_based_reasons = self._load_sms_based_reasons()
         self.rule_engine = self._load_rule_engine()
+        self.clinical_terms_df = self._load_clinical_terms_rules()
         self.general_no_show_reasons = general_no_show_reasons or self.no_show_reasons
 
+    # --- Data Loading ---
     def _load_reasons_from_csv(self, filename, colname='reason'):
         path = os.path.join(self.synthetic_dir, filename)
         df = pd.read_csv(path)
@@ -26,30 +27,30 @@ class DataSimulator:
 
     def _load_age_based_reasons(self):
         path = os.path.join(self.synthetic_dir, 'age_based_reasons.csv')
-        df = pd.read_csv(path)
-        return df
+        return pd.read_csv(path)
 
     def _load_gender_based_reasons(self):
         path = os.path.join(self.synthetic_dir, 'gender_based_reasons.csv')
-        df = pd.read_csv(path)
-        return df
+        return pd.read_csv(path)
 
     def _load_sms_based_reasons(self):
         path = os.path.join(self.synthetic_dir, 'sms_based_reasons.csv')
-        df = pd.read_csv(path)
-        return df
+        return pd.read_csv(path)
 
     def _load_rule_engine(self):
         path = os.path.join(self.synthetic_dir, 'rule_engine.csv')
-        df = pd.read_csv(path)
-        return df
+        return pd.read_csv(path)
 
+    def _load_clinical_terms_rules(self):
+        path = os.path.join(self.synthetic_dir, 'clinical_terms_rules.csv')
+        return pd.read_csv(path)
+
+    # --- Rule Engine ---
     def _apply_rule_engine(self, row, template_type):
         matches = []
         for _, rule in self.rule_engine.iterrows():
             if rule['template_type'] != template_type:
                 continue
-            # Prepare the context for eval
             context = {
                 'age': row.get('Age', 0),
                 'gender': f"'{str(row.get('Gender', '')).strip().upper()}'",
@@ -68,6 +69,7 @@ class DataSimulator:
                 continue
         return matches
 
+    # --- Simulation Main Entry ---
     def simulate(self, input_csv, output_csv, notes_col='PatientNotes', sentiment_col='PatientSentiment', reason_col='NoShowReason', parallel=True, n_jobs=-1):
         df = pd.read_csv(input_csv)
         if parallel:
@@ -92,19 +94,7 @@ class DataSimulator:
         df.to_csv(output_csv, index=False, quoting=csv.QUOTE_ALL)
         return df
 
-    def _default_no_show_reasons(self):
-        return self.no_show_reasons
-
-    def _positive_attendance_reasons(self):
-        return self.positive_attendance_reasons
-
-    def _sms_based_reasons(self, sms_received, no_show):
-        if sms_received == 1:
-            show = 'yes' if str(no_show).strip().lower() == 'yes' else 'no'
-            reasons = self.sms_based_reasons[self.sms_based_reasons['no_show'] == show]['sms_reason'].dropna().tolist()
-            return reasons
-        return []
-
+    # --- No Show Reason Generation ---
     def _generate_no_show_reason(self, row):
         template_type = 'no_show_reason' if str(row['No-show']).strip().lower() == 'yes' else 'positive_attendance_reason'
         matches = self._apply_rule_engine(row, template_type)
@@ -117,7 +107,6 @@ class DataSimulator:
             elif ref in ['yes', 'no']:
                 ref_pools[ref] = self.sms_based_reasons[self.sms_based_reasons['no_show'] == ref]['sms_reason'].dropna().tolist()
             elif ref:
-                # Only use string refs for matching
                 ref_str = str(ref) if not isinstance(ref, str) else ref
                 ref_pools[ref] = [r for r in self.no_show_reasons if isinstance(r, str) and ref_str.lower() in r.lower()]
         if template_type == 'no_show_reason':
@@ -138,26 +127,53 @@ class DataSimulator:
         else:
             return " ".join(random.sample(self.positive_attendance_reasons, min(2, len(self.positive_attendance_reasons))))
 
+    # --- Patient Notes Generation ---
     def _generate_patient_notes(self, row):
         matches = self._apply_rule_engine(row, 'patient_notes')
-        # Precompute filtered templates for refs
+        clinical_terms_df = self.clinical_terms_df
+        # Avoid chained indexing warning by filtering stepwise
+        diabetes_terms = clinical_terms_df[clinical_terms_df['category'] == 'PROBLEM']
+        diabetes_terms = diabetes_terms[diabetes_terms['term'].str.contains('diabet', case=False)]['term'].str.lower().tolist()
+        hypertension_terms = clinical_terms_df[clinical_terms_df['category'] == 'PROBLEM']
+        hypertension_terms = hypertension_terms[hypertension_terms['term'].str.contains('hyperten|htn|blood pressure', case=False)]['term'].str.lower().tolist()
+        alcoholism_terms = clinical_terms_df[clinical_terms_df['category'] == 'PROBLEM']
+        alcoholism_terms = alcoholism_terms[alcoholism_terms['term'].str.contains('alcohol', case=False)]['term'].str.lower().tolist()
+        medication_terms = clinical_terms_df[clinical_terms_df['category'] == 'MEDICATION']['term'].str.lower().tolist()
+        procedure_terms = clinical_terms_df[clinical_terms_df['category'].isin(['PROCEDURE', 'TEST'])]['term'].str.lower().tolist()
         ref_templates = {}
         for ref in set(matches):
             ref_templates[ref] = [n for n in self.patient_notes_templates if ref.lower() in n.lower()]
+        for term in diabetes_terms + hypertension_terms + alcoholism_terms + medication_terms + procedure_terms:
+            ref_templates[term] = [n for n in self.patient_notes_templates if term in n.lower()]
         notes = set()
         for ref in matches:
             filtered = ref_templates.get(ref, [])
             if filtered:
                 sampled = random.sample(filtered, min(2, len(filtered)))
                 notes.update(sampled)
+        for term in diabetes_terms:
+            if str(row.get('Diabetes', 0)) == '1' or term in str(row.get('PatientNotes', '')).lower():
+                filtered = ref_templates.get(term, [])
+                if filtered:
+                    notes.update(random.sample(filtered, min(1, len(filtered))))
+        for term in hypertension_terms:
+            if str(row.get('Hypertension', 0)) == '1' or term in str(row.get('PatientNotes', '')).lower():
+                filtered = ref_templates.get(term, [])
+                if filtered:
+                    notes.update(random.sample(filtered, min(1, len(filtered))))
+        for term in alcoholism_terms:
+            if str(row.get('Alcoholism', 0)) == '1' or term in str(row.get('PatientNotes', '')).lower():
+                filtered = ref_templates.get(term, [])
+                if filtered:
+                    notes.update(random.sample(filtered, min(1, len(filtered))))
         if not notes:
             fallback = [n for n in self.patient_notes_templates if 'no chronic conditions' in n.lower() or 'general health checkup' in n.lower()]
             notes.update(random.sample(fallback, min(2, len(fallback))))
         return " ".join(random.sample(list(notes), min(3, len(notes))))
 
+    # --- Patient Sentiment Generation ---
     def _generate_patient_sentiment(self, row):
         matches = self._apply_rule_engine(row, 'patient_sentiment')
-        # Precompute filtered templates for refs
         ref_templates = {}
         for ref in set(matches):
             ref_templates[ref] = [s for s in self.patient_sentiment_templates if ref.lower() in s.lower()]

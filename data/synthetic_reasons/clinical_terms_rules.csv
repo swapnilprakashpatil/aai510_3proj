@@ -1,0 +1,55 @@
+category,term
+PROBLEM,diabetes
+PROBLEM,type 2 diabetes
+PROBLEM,type ii diabetes
+PROBLEM,type 1 diabetes
+PROBLEM,type i diabetes
+PROBLEM,t2dm
+PROBLEM,t1dm
+PROBLEM,diabetic
+PROBLEM,non-insulin dependent diabetes
+PROBLEM,insulin dependent diabetes
+PROBLEM,gestational diabetes
+PROBLEM,diabetic neuropathy
+PROBLEM,diabetic retinopathy
+PROBLEM,hyperglycemia
+PROBLEM,hypoglycemia
+PROBLEM,hypertension
+PROBLEM,htn
+PROBLEM,high blood pressure
+PROBLEM,elevated blood pressure
+PROBLEM,systolic hypertension
+PROBLEM,diastolic hypertension
+PROBLEM,stage 1 hypertension
+PROBLEM,stage 2 hypertension
+PROBLEM,uncontrolled hypertension
+PROBLEM,borderline hypertension
+PROBLEM,alcoholism
+PROBLEM,alcohol use disorder
+PROBLEM,aud
+PROBLEM,alcohol abuse
+PROBLEM,alcohol dependency
+PROBLEM,alcohol dependence
+PROBLEM,alcohol misuse
+PROBLEM,chronic alcohol use
+PROBLEM,heavy drinking
+PROBLEM,excessive alcohol
+PROBLEM,alcoholic
+PROBLEM,positive cage
+PROBLEM,positive audit
+MEDICATION,amlodipine
+MEDICATION,metformin
+MEDICATION,naltrexone
+MEDICATION,lisinopril
+MEDICATION,glipizide
+MEDICATION,insulin
+MEDICATION,disulfiram
+MEDICATION,acamprosate
+PROCEDURE,blood pressure
+TEST,hba1c
+TEST,fasting glucose
+TEST,random glucose
+TEST,liver function test
+TEST,ggt
+TEST,ast
+TEST,alt
