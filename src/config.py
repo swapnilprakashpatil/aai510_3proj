@@ -62,38 +62,14 @@ try:
             EMOTION_VARIATIONS[emotion] = [emotion]
 except Exception as e:
     print(f"Error loading emotion variations: {e}")
-    EMOTION_VARIATIONS = {
-        'anxiety': ['anxious', 'worried', 'nervous', 'uneasy', 'apprehensive', 'tense', 'fearful', 'panic', 'fretful', 'troubled', 'uptight', 'restless', 'agitated', 'concerned', 'distressed', 'anxiousness', 'anxiety disorder', 'anxiously', 'anxiety attack', 'anxiety symptoms', 'high anxiety', 'mild anxiety', 'severe anxiety', 'crippling anxiety', 'constant anxiety', 'worsening anxiety', 'debilitating anxiety', 'overwhelming anxiety', 'recurring anxiety', 'heightened anxiety', 'increasing anxiety', 'anxiety level', 'health anxiety', 'social anxiety', 'anticipatory anxiety', 'generalized anxiety', 'performance anxiety', 'emotional anxiety', 'anxiety feeling', 'anxiety inducing', 'anxiety-related', 'worry', 'feeling anxious'],
-        'stress': ['stressed', 'overwhelmed', 'pressure', 'tense', 'strain', 'burden', 'distress', 'burnout', 'hassled', 'taxed', 'exhausted', 'strained', 'hectic', 'harried', 'fatigued', 'stressful', 'stress levels', 'stressfully', 'stressed out', 'burnout syndrome', 'chronic stress', 'acute stress', 'under stress', 'stress reaction', 'mental stress', 'physical stress', 'environmental stress', 'occupational stress', 'daily stress', 'emotional stress', 'work stress', 'stress factor', 'stress management', 'stress response', 'stress symptoms', 'stress levels', 'high stress', 'maximum stress', 'constant stress', 'prolonged stress', 'stress-related', 'strain', 'feeling stressed'],
-        'confusion': ['confused', 'perplexed', 'puzzled', 'disoriented', 'uncertain', 'unclear', 'bewildered', 'ambiguous', 'lost', 'disorganized', 'muddled', 'baffled', 'mystified', 'disconcerted', 'unsure', 'confusing', 'confusion state', 'confusedly', 'total confusion', 'mental confusion', 'cognitive confusion', 'momentarily confused', 'thoroughly confused', 'utterly confused', 'somewhat confused', 'increasingly confused', 'slight confusion', 'temporary confusion', 'persistent confusion', 'profound confusion', 'complete confusion', 'confusion about', 'causing confusion', 'added confusion', 'leads to confusion', 'resulting confusion', 'extreme confusion', 'growing confusion', 'general confusion', 'increasing confusion', 'confusion-related', 'misunderstanding', 'feeling confused'],
-        'hopeful': ['hope', 'optimistic', 'positive', 'confident', 'encouraged', 'promising', 'anticipation', 'reassured', 'upbeat', 'enthusiastic', 'expectant', 'inspired', 'buoyant', 'cheery', 'motivated', 'hopeful feeling', 'hopefulness', 'hopefully', 'high hopes', 'renewed hope', 'cautiously hopeful', 'feeling hopeful', 'remaining hopeful', 'cautious optimism', 'reasonable hope', 'significant hope', 'unexpected hope', 'genuine hope', 'quiet hope', 'distant hope', 'glimmer of hope', 'spark of hope', 'sign of hope', 'rays of hope', 'beacon of hope', 'message of hope', 'chance of hope', 'foundation of hope', 'element of hope', 'sustained hope', 'hope-filled', 'encouraging', 'feeling hopeful'],
-        'fear': ['afraid', 'scared', 'frightened', 'terrified', 'panic', 'dread', 'horror', 'alarmed', 'petrified', 'threatened', 'intimidated', 'worried', 'insecure', 'vulnerable', 'uncomfortable', 'fearfulness', 'fearsome', 'fearfully', 'fear of', 'fight or flight', 'paralyzing fear', 'intense fear', 'fear response', 'deep fear', 'fear of unknown', 'persistent fear', 'gripping fear', 'acute fear', 'mortal fear', 'growing fear', 'deepening fear', 'fear in mind', 'overcome fear', 'face your fear', 'crippling fear', 'nagging fear', 'instilling fear', 'persistent fear', 'perpetual fear', 'intense fear', 'fear-inducing', 'scary', 'feeling afraid']
-    }
 
 # Load negation patterns from CSV or fall back to constants
 try:
     import pandas as pd
     df_neg = pd.read_csv(NEGATION_PATTERNS_PATH, header=None)
     NEGATION_PATTERNS = df_neg.iloc[:, 0].dropna().tolist()
-except Exception:
-    NEGATION_PATTERNS = [
-        r'not\s+\w+', r'no\s+\w+', r"don't\s+\w+", r"doesn't\s+\w+", r"didn't\s+\w+",
-        r"isn't\s+\w+", r"aren't\s+\w+", r"wasn't\s+\w+", r"weren't\s+\w+",
-        r"haven't\s+\w+", r"hasn't\s+\w+", r"hadn't\s+\w+", r"won't\s+\w+", r"wouldn't\s+\w+",
-        r"can't\s+\w+", r"cannot\s+\w+", r"couldn't\s+\w+", r"shouldn't\s+\w+",
-        r'never\s+\w+', r'neither\s+\w+', r'nor\s+\w+', r'none\s+\w+', r'without\s+\w+',
-        r'absence\s+of\s+\w+', r'lack\s+of\s+\w+', r'free\s+from\s+\w+', r'deny\s+\w+', r'denies\s+\w+',
-        r'refused\s+\w+', r'refute\s+\w+', r'reject\s+\w+', r'nothing\s+\w+', r'nobody\s+\w+',
-        r'nowhere\s+\w+', r'rarely\s+\w+', r'seldom\s+\w+', r'hardly\s+\w+', r'barely\s+\w+',
-        r'scarcely\s+\w+', r'at\s+all', r'whatsoever', r'lacks', r'free from',
-        r'shows no', r'exhibiting no', r'denies', r'denying', r'lacking', r'avoided',
-        r'avoiding', r'ruled out', r'no significant', r'minimal', r'no evidence of',
-        r'no indication of', r'no signs of', r'absence of any', r'not even', r'shows absence of',
-        r'completely absent', r'effectively ruled out', r'is absent', r'are absent',
-        r'ruled out for', r'explicitly denied', r'patient denies', r'not bothered by',
-        r'not experiencing', r'not feeling', r'not having', r'not at all',
-        r'never had', r'rarely if ever', r'infrequently', r'not reported'
-    ]
+except Exception as e:
+    print(f"Error loading negation patterns: {e}")
 
 # Model names for centralized reference
 MODEL_NAMES = {
@@ -145,8 +121,10 @@ HYPERPARAMETERS = {
 # Model export paths for sentiment analysis
 SENTIMENT_MODEL_EXPORT_PATH_RAW = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_raw')
 SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_optimized')
-
+# Model export path for  prediction
 PREDICTION_MODEL_EXPORT_PATH = os.path.join(NLP_MODEL_DIR, 'prediction')
+# Model export path for topic modeling
+TOPIC_MODEL_EXPORT_PATH = os.path.join(NLP_MODEL_DIR, 'topic_model')
 
 def is_step_enabled(step_name):
     return any(step for step in RUN_CONFIGURATION if step['step'] == step_name and step['enabled'] is True)

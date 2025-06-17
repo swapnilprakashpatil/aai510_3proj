@@ -909,11 +909,17 @@ class PlotGenerator:
         plt.legend()
         plt.show()
 
-    def plot_wordclouds(self, lda_model, vectorizer, condition):
+    def plot_wordclouds(self, lda_model, vectorizer, condition, figsize=(None, None), wc_width=None, wc_height=None):
         for idx, topic in enumerate(lda_model.components_):
-            self._setup_plot(figsize=(6, 4))
+            fig_w, fig_h = figsize if figsize != (None, None) else (None, None)
+            wc_w = wc_width if wc_width else 800
+            wc_h = wc_height if wc_height else 400
+            if fig_w and fig_h:
+                self._setup_plot(figsize=(fig_w, fig_h))
+            else:
+                plt.figure()
             word_freq = {vectorizer.get_feature_names_out()[i]: topic[i] for i in topic.argsort()[:-21:-1]}
-            wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
+            wordcloud = WordCloud(width=wc_w, height=wc_h, background_color='white').generate_from_frequencies(word_freq)
             plt.imshow(wordcloud, interpolation='bilinear')
             plt.axis('off')
             plt.title(f'{condition} - Topic {idx+1}')

@@ -6,6 +6,8 @@ from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import silhouette_score
 import joblib
+import os
+from medspacy.visualization import visualize_ent
 
 class ClinicalTopicModel:
     def __init__(self, config):
@@ -61,8 +63,9 @@ class ClinicalTopicModel:
         return perplexity, sil_score
 
     def export(self, path_prefix):
-        joblib.dump(self.model, f"{path_prefix}_lda_model.joblib")
-        joblib.dump(self.vectorizer, f"{path_prefix}_vectorizer.joblib")
+        os.makedirs(path_prefix, exist_ok=True)
+        joblib.dump(self.model, os.path.join(path_prefix, "lda_model.joblib"))
+        joblib.dump(self.vectorizer, os.path.join(path_prefix, "vectorizer.joblib"))
 
     def get_topics(self, n_top_words=10):
         feature_names = self.vectorizer.get_feature_names_out()
@@ -70,3 +73,7 @@ class ClinicalTopicModel:
         for idx, topic in enumerate(self.model.components_):
             topics.append([feature_names[i] for i in topic.argsort()[:-n_top_words - 1:-1]])
         return topics
+
+    def plot_medspacy_ents(self, text):
+        doc = self.nlp(text)
+        visualize_ent(doc)
