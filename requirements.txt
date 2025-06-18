@@ -28,3 +28,4 @@ openpyxl>=3.0.0
 tabulate>=0.8.0
 medspacy>=1.0.0
 spacy>=3.0.0
+kneed>=0.8.0
