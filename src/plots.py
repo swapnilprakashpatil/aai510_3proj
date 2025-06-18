@@ -2,18 +2,19 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
+import string
+import os
+import nltk
 from wordcloud import WordCloud
 from collections import Counter
 from typing import Optional, Tuple
 from src.config import EMOTION_STATES
-from sklearn.metrics import confusion_matrix, roc_curve, auc
-import re
-import string
-import os
+from sklearn.metrics import confusion_matrix, roc_curve, auc, accuracy_score
+from mpl_toolkits.mplot3d import Axes3D
+from nltk.corpus import stopwords
 
 try:
-    import nltk
-    from nltk.corpus import stopwords
     nltk.download('stopwords', quiet=True)
     NLTK_AVAILABLE = True
 except ImportError:
@@ -921,7 +922,6 @@ class PlotGenerator:
 
     @staticmethod
     def plot_accuracy(y_true, y_pred):
-        from sklearn.metrics import accuracy_score
         acc = accuracy_score(y_true, y_pred)
         plt.figure(figsize=(5, 3))
         plt.bar(['Accuracy'], [acc], color='skyblue')
@@ -932,7 +932,6 @@ class PlotGenerator:
 
     @staticmethod
     def plot_confusion_matrix(y_true, y_pred):
-        from sklearn.metrics import confusion_matrix
         cm = confusion_matrix(y_true, y_pred)
         plt.figure(figsize=(5, 4))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
@@ -943,7 +942,6 @@ class PlotGenerator:
 
     @staticmethod
     def plot_roc_auc(y_true, y_score):
-        from sklearn.metrics import roc_curve, auc
         fpr, tpr, _ = roc_curve(y_true, y_score)
         roc_auc = auc(fpr, tpr)
         plt.figure(figsize=(6, 4))
@@ -959,7 +957,6 @@ class PlotGenerator:
 
     def plot_training_metrics(trainer):
         logs = trainer.state.log_history
-        import matplotlib.pyplot as plt
         train_loss = [x['loss'] for x in logs if 'loss' in x]
         eval_loss = [x['eval_loss'] for x in logs if 'eval_loss' in x]
         plt.figure(figsize=(8,5))
@@ -1072,3 +1069,155 @@ class PlotGenerator:
         # Print some statistics
         print(f"Total unique words after filtering: {len(word_freq)}")
         print(f"Top 10 most frequent words: {dict(word_freq.most_common(10))}")
+
+    def plot_pca_3d_colored_by_feature(self, pca_result, df, feature_name, figsize=(8, 12)):
+        color_vals = df[feature_name]
+        norm_colors = (color_vals.to_numpy() - color_vals.min()) / (color_vals.max() - color_vals.min())
+        colors = plt.cm.viridis(norm_colors)
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111, projection='3d')
+        scatter = ax.scatter(pca_result[:, 0], pca_result[:, 1], pca_result[:, 2], c=colors, alpha=0.7)
+        ax.set_title(f'PCA Projection (3D) - Colored by {feature_name}', fontsize=14)
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.set_zlabel('PC3')
+        cbar = fig.colorbar(plt.cm.ScalarMappable(cmap='viridis'), ax=ax)
+        cbar.set_label(feature_name)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_pca_3d_colored_by_features(self, pca_result, df, feature_names, figsize=(18, 12)):
+        n = len(feature_names)
+        fig = plt.figure(figsize=(figsize[0]*n, figsize[1]))
+        for i, feature_name in enumerate(feature_names, 1):
+            color_vals = df[feature_name]
+            norm_colors = (color_vals.to_numpy() - color_vals.min()) / (color_vals.max() - color_vals.min())
+            colors = plt.cm.viridis(norm_colors)
+            ax = fig.add_subplot(1, n, i, projection='3d')
+            scatter = ax.scatter(pca_result[:, 0], pca_result[:, 1], pca_result[:, 2], c=colors, alpha=0.7)
+            ax.set_title(f'{feature_name}', fontsize=20)
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
+            cbar = fig.colorbar(plt.cm.ScalarMappable(cmap='viridis'), ax=ax, shrink=0.7)
+            cbar.set_label(feature_name)
+        plt.suptitle('PCA Projection (3D) - Colored by Features', fontsize=18)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.show()
+
+    def plot_pca_explained_variance(self, explained_df):
+        plt.figure(figsize=(10, 6))
+        plt.plot(explained_df['Principal Component'], explained_df['Explained Variance Ratio'], marker='o', label='Explained Variance')
+        plt.plot(explained_df['Principal Component'], explained_df['Cumulative Variance'], marker='o', linestyle='--', label='Cumulative Variance')
+        plt.title('PCA Explained Variance')
+        plt.xlabel('Principal Components')
+        plt.ylabel('Variance Ratio')
+        plt.xticks(rotation=45)
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_pca_biplot(self, X_pca, loadings, features, scale=5):
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(X_pca[:, 0], X_pca[:, 1], X_pca[:, 2], alpha=0.1)
+        for i, feature in enumerate(features):
+            ax.quiver(0, 0, 0, loadings.iloc[i, 0]*scale, loadings.iloc[i, 1]*scale, loadings.iloc[i, 2]*scale, color='r', arrow_length_ratio=0.1)
+            ax.text(loadings.iloc[i, 0]*scale*1.1, loadings.iloc[i, 1]*scale*1.1, loadings.iloc[i, 2]*scale*1.1, feature, color='red')
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.set_zlabel('PC3')
+        ax.set_title('3D PCA Biplot (Feature Contributions)')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_elbow_curve(self, k_values, wcss, optimal_k=None):
+        plt.figure(figsize=(8, 5))
+        plt.plot(k_values, wcss, marker='o')
+        if optimal_k is not None:
+            plt.axvline(optimal_k, color='red', linestyle='--', label=f'Elbow at k={optimal_k}')
+        plt.title('Elbow Method to Determine Optimal k')
+        plt.xlabel('Number of Clusters (k)')
+        plt.ylabel('WCSS (Inertia)')
+        plt.xticks(k_values)
+        plt.grid(True)
+        if optimal_k is not None:
+            plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_clustering_3d(self, X_reduced, labels, k, method='KMeans', cmap='viridis'):
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111, projection='3d')
+        scatter = ax.scatter(X_reduced.iloc[:, 0], X_reduced.iloc[:, 1], X_reduced.iloc[:, 2], c=labels, cmap=cmap, alpha=0.7)
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.set_zlabel('PC3')
+        ax.set_title(f'{method} Clusters (k={k})')
+        legend = ax.legend(*scatter.legend_elements(), title="Cluster")
+        ax.add_artist(legend)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_clustering_3d_side_by_side(self, X_reduced, kmeans_labels, gmm_labels, k, cmap_kmeans='viridis', cmap_gmm='plasma', figsize=(16, 6)):
+        fig = plt.figure(figsize=figsize)
+        # KMeans plot
+        ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+        scatter1 = ax1.scatter(
+            X_reduced[:, 0] if not hasattr(X_reduced, 'iloc') else X_reduced.iloc[:, 0],
+            X_reduced[:, 1] if not hasattr(X_reduced, 'iloc') else X_reduced.iloc[:, 1],
+            X_reduced[:, 2] if not hasattr(X_reduced, 'iloc') else X_reduced.iloc[:, 2],
+            c=kmeans_labels, cmap=cmap_kmeans, alpha=0.7
+        )
+        ax1.set_xlabel('PC1')
+        ax1.set_ylabel('PC2')
+        ax1.set_zlabel('PC3')
+        ax1.set_title(f'KMeans Clusters (k={k})')
+        legend1 = ax1.legend(*scatter1.legend_elements(), title="Cluster")
+        ax1.add_artist(legend1)
+        # GMM plot
+        ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+        scatter2 = ax2.scatter(
+            X_reduced[:, 0] if not hasattr(X_reduced, 'iloc') else X_reduced.iloc[:, 0],
+            X_reduced[:, 1] if not hasattr(X_reduced, 'iloc') else X_reduced.iloc[:, 1],
+            X_reduced[:, 2] if not hasattr(X_reduced, 'iloc') else X_reduced.iloc[:, 2],
+            c=gmm_labels, cmap=cmap_gmm, alpha=0.7
+        )
+        ax2.set_xlabel('PC1')
+        ax2.set_ylabel('PC2')
+        ax2.set_zlabel('PC3')
+        ax2.set_title(f'GMM Clusters (k={k})')
+        legend2 = ax2.legend(*scatter2.legend_elements(), title="Cluster")
+        ax2.add_artist(legend2)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_clustering_scores(self, kmeans_score_df, gmm_score_df):
+        plt.figure(figsize=(16, 5))
+        plt.subplot(1, 3, 1)
+        plt.plot(kmeans_score_df['k'], kmeans_score_df['Silhouette Score'], marker='o', color='green', label='KMeans')
+        plt.plot(gmm_score_df['k'], gmm_score_df['Silhouette Score'], marker='o', color='blue', label='GMM')
+        plt.title('Silhouette Score')
+        plt.xlabel('k')
+        plt.ylabel('Score')
+        plt.grid(True)
+        plt.legend()
+        plt.subplot(1, 3, 2)
+        plt.plot(kmeans_score_df['k'], kmeans_score_df['Davies-Bouldin Score'], marker='o', color='green', label='KMeans')
+        plt.plot(gmm_score_df['k'], gmm_score_df['Davies-Bouldin Score'], marker='o', color='blue', label='GMM')
+        plt.title('Davies-Bouldin Index')
+        plt.xlabel('k')
+        plt.ylabel('Score')
+        plt.grid(True)
+        plt.legend()
+        plt.subplot(1, 3, 3)
+        plt.plot(kmeans_score_df['k'], kmeans_score_df['Calinski-Harabasz Score'], marker='o', color='green', label='KMeans')
+        plt.plot(gmm_score_df['k'], gmm_score_df['Calinski-Harabasz Score'], marker='o', color='blue', label='GMM')
+        plt.title('Calinski-Harabasz Score')
+        plt.xlabel('k')
+        plt.ylabel('Score')
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
