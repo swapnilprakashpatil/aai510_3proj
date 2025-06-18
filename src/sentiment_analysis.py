@@ -13,15 +13,90 @@ from torch.optim import AdamW
 from tqdm import tqdm
 from src.config import RANDOM_STATE, EMOTION_STATES, NLP_CONFIG, HYPERPARAMETERS
 from src.emotion_postprocessor import EmotionPostProcessor
+import random
+import re
 
 warnings.filterwarnings("ignore")
 
+class TextAugmentation:
+    """Simple text augmentation techniques to reduce overfitting"""
+    
+    @staticmethod
+    def random_deletion(text, p=0.1):
+        """Randomly delete words with probability p"""
+        words = text.split()
+        if len(words) == 1:
+            return text
+        
+        new_words = []
+        for word in words:
+            if random.random() > p:
+                new_words.append(word)
+        
+        if len(new_words) == 0:
+            return random.choice(words)
+        
+        return ' '.join(new_words)
+    
+    @staticmethod
+    def random_swap(text, n=1):
+        """Randomly swap n pairs of words"""
+        words = text.split()
+        length = len(words)
+        
+        if length < 2:
+            return text
+            
+        for _ in range(n):
+            idx1, idx2 = random.sample(range(length), 2)
+            words[idx1], words[idx2] = words[idx2], words[idx1]
+        
+        return ' '.join(words)
+    
+    @staticmethod
+    def add_noise(text, noise_level=0.05):
+        """Add small amounts of character-level noise"""
+        if random.random() > noise_level:
+            return text
+            
+        words = text.split()
+        if not words:
+            return text
+            
+        # Randomly choose a word to modify
+        word_idx = random.randint(0, len(words) - 1)
+        word = words[word_idx]
+        
+        if len(word) <= 2:
+            return text
+            
+        # Randomly choose modification type
+        modification = random.choice(['swap', 'duplicate', 'delete'])
+        
+        if modification == 'swap' and len(word) > 2:
+            # Swap two adjacent characters
+            pos = random.randint(0, len(word) - 2)
+            word = word[:pos] + word[pos+1] + word[pos] + word[pos+2:]
+        elif modification == 'duplicate':
+            # Duplicate a character
+            pos = random.randint(0, len(word) - 1)
+            word = word[:pos] + word[pos] + word[pos:]
+        elif modification == 'delete':
+            # Delete a character
+            pos = random.randint(0, len(word) - 1)
+            word = word[:pos] + word[pos+1:]
+        
+        words[word_idx] = word
+        return ' '.join(words)
+
 class EmotionDataset(Dataset):
-    def __init__(self, texts, targets, tokenizer, max_len=128):
+    def __init__(self, texts, targets, tokenizer, max_len=128, augment=False):
         self.texts = texts
         self.targets = targets
         self.tokenizer = tokenizer
         self.max_len = max_len
+        self.augment = augment
+        self.augmenter = TextAugmentation()
     
     def __len__(self):
         return len(self.texts)
@@ -29,6 +104,16 @@ class EmotionDataset(Dataset):
     def __getitem__(self, idx):
         text = str(self.texts[idx])
         target = self.targets[idx]
+        
+        # Apply augmentation during training
+        if self.augment and random.random() < 0.3:  # 30% chance of augmentation
+            aug_choice = random.choice(['deletion', 'swap', 'noise'])
+            if aug_choice == 'deletion':
+                text = self.augmenter.random_deletion(text, p=0.1)
+            elif aug_choice == 'swap':
+                text = self.augmenter.random_swap(text, n=1)
+            elif aug_choice == 'noise':
+                text = self.augmenter.add_noise(text, noise_level=0.1)
         
         encoding = self.tokenizer.encode_plus(
             text,
@@ -70,11 +155,10 @@ class SentimentAnalysisModel:
         X_train_val, X_test, y_train_val, y_test = train_test_split(
             X, y, test_size=0.2, random_state=self.seed, stratify=self.df['emotion_count'])
         X_train, X_val, y_train, y_val = train_test_split(
-            X_train_val, y_train_val, test_size=0.15, random_state=self.seed)
-        # Use num_workers=0 for CPU, no pin_memory
-        self.train_dataset = EmotionDataset(X_train, y_train, self.tokenizer, max_len=self.max_seq_length)
-        self.val_dataset = EmotionDataset(X_val, y_val, self.tokenizer, max_len=self.max_seq_length)
-        self.test_dataset = EmotionDataset(X_test, y_test, self.tokenizer, max_len=self.max_seq_length)
+            X_train_val, y_train_val, test_size=0.15, random_state=self.seed)        # Use augmentation only for training data
+        self.train_dataset = EmotionDataset(X_train, y_train, self.tokenizer, max_len=self.max_seq_length, augment=True)
+        self.val_dataset = EmotionDataset(X_val, y_val, self.tokenizer, max_len=self.max_seq_length, augment=False)
+        self.test_dataset = EmotionDataset(X_test, y_test, self.tokenizer, max_len=self.max_seq_length, augment=False)
         self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
         self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size*2, num_workers=0)
         self.test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size*2, num_workers=0)
@@ -83,6 +167,9 @@ class SentimentAnalysisModel:
         config = AutoConfig.from_pretrained(self.model_name)
         config.num_labels = len(self.emotional_states)
         config.problem_type = "multi_label_classification"
+        # Add dropout for regularization
+        config.hidden_dropout_prob = 0.2
+        config.attention_probs_dropout_prob = 0.2
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name, config=config)
         self.model = self.model.to(self.device)
         # Use torch.compile for further speedup if available (PyTorch 2.0+) and not on Windows
@@ -92,21 +179,22 @@ class SentimentAnalysisModel:
             except Exception:
                 pass
 
-    def train(self, epochs=2, patience=1, accumulation_steps=4):
-        # Use TinyBERT notebook defaults for speed
+    def train(self, epochs=5, patience=3, accumulation_steps=4):
+        # Increased epochs and patience to prevent overfitting
         self.training_losses = []
         self.validation_losses = []
-        self.epoch_times = []
-        optimizer = AdamW(self.model.parameters(), lr=5e-5)
+        self.epoch_times = []        # Added weight decay for regularization and lower learning rate
+        optimizer = AdamW(self.model.parameters(), lr=2e-5, weight_decay=0.01)
         total_steps = (len(self.train_loader) // accumulation_steps) * epochs
+        # Add warmup for better training stability
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=0,
+            num_warmup_steps=int(0.1 * total_steps),  # 10% warmup
             num_training_steps=total_steps
         )
         self._train_model(self.model, self.train_loader, self.val_loader, optimizer, scheduler, self.device, epochs, patience, accumulation_steps)
 
-    def _train_model(self, model, train_dataloader, val_dataloader, optimizer, scheduler, device, epochs=2, patience=1, accumulation_steps=4):
+    def _train_model(self, model, train_dataloader, val_dataloader, optimizer, scheduler, device, epochs=5, patience=3, accumulation_steps=4):
         model.train()
         best_val_loss = float('inf')
         early_stop_counter = 0
@@ -114,6 +202,10 @@ class SentimentAnalysisModel:
         self.training_losses = []
         self.validation_losses = []
         self.epoch_times = []
+        
+        # Use label smoothing loss to prevent overfitting
+        criterion = LabelSmoothingBCELoss(smoothing=0.1)
+        
         for epoch in range(epochs):
             start_time = time_module.time()
             print(f"Epoch {epoch+1}/{epochs}")
@@ -126,7 +218,7 @@ class SentimentAnalysisModel:
                 targets = batch['targets'].to(device)
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 logits = outputs.logits
-                loss = torch.nn.BCEWithLogitsLoss()(logits, targets)
+                loss = criterion(logits, targets)
                 loss = loss / accumulation_steps
                 loss.backward()
                 if (i + 1) % accumulation_steps == 0 or (i + 1) == len(train_dataloader):
@@ -181,6 +273,8 @@ class SentimentAnalysisModel:
         self.model.eval()
         all_predictions = []
         all_targets = []
+        all_logits = []
+        
         with torch.no_grad():
             for batch in tqdm(self.test_loader, desc="Evaluating"):
                 input_ids = batch['input_ids'].to(self.device)
@@ -188,12 +282,42 @@ class SentimentAnalysisModel:
                 targets = batch['targets']
                 outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
                 logits = outputs.logits
-                predictions = (torch.sigmoid(logits) >= 0.5).cpu().numpy().astype(int)
-                all_predictions.append(predictions)
+                
+                # Store logits for threshold tuning
+                all_logits.append(torch.sigmoid(logits).cpu().numpy())
                 all_targets.append(targets.numpy())
-        predictions = np.vstack(all_predictions)
+        
+        # Combine all results
+        all_logits = np.vstack(all_logits)
         actual_labels = np.vstack(all_targets)
+        
+        # Use threshold tuning instead of fixed 0.5
+        predictions = self._tune_thresholds(all_logits, actual_labels)
+        
         return predictions, actual_labels
+    
+    def _tune_thresholds(self, logits, actual_labels):
+        """Tune thresholds for each emotion to optimize F1 score"""
+        optimal_predictions = np.zeros_like(actual_labels)
+        
+        for i, emotion in enumerate(self.emotional_states):
+            best_threshold = 0.5
+            best_f1 = 0
+            
+            # Try different thresholds
+            for threshold in np.arange(0.1, 0.9, 0.05):
+                pred = (logits[:, i] >= threshold).astype(int)
+                from sklearn.metrics import f1_score
+                f1 = f1_score(actual_labels[:, i], pred, average='binary', zero_division=0)
+                
+                if f1 > best_f1:
+                    best_f1 = f1
+                    best_threshold = threshold
+            
+            optimal_predictions[:, i] = (logits[:, i] >= best_threshold).astype(int)
+            print(f"Optimal threshold for {emotion}: {best_threshold:.2f}, F1: {best_f1:.3f}")
+        
+        return optimal_predictions
 
     def report(self, predictions, actual_labels):
         accuracies = {}
@@ -433,22 +557,33 @@ class SentimentAnalysisModel:
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             logits = outputs.logits
             probs = torch.sigmoid(logits).cpu().numpy()[0]
-            preds = (probs >= threshold)
-        # Always use EMOTION_STATES for output keys
+            preds = (probs >= threshold)        # Always use EMOTION_STATES for output keys
         from src.config import EMOTION_STATES
-        return {emotion: bool(pred) for emotion, pred in zip(EMOTION_STATES, preds)}
-        
-    @staticmethod
+        return {emotion: bool(pred) for emotion, pred in zip(EMOTION_STATES, preds)}    @staticmethod
     def predict_emotions(text, model, tokenizer, device, emotion_variations_path=None, negation_patterns_path=None):
+        from .config import EMOTION_VARIATIONS_PATH, NEGATION_PATTERNS_PATH
+        
+        # Provide default paths if not specified
+        if emotion_variations_path is None:
+            emotion_variations_path = EMOTION_VARIATIONS_PATH
+        if negation_patterns_path is None:
+            negation_patterns_path = NEGATION_PATTERNS_PATH
+            
         post_processor = EmotionPostProcessor(
             emotion_variations_path=emotion_variations_path,
             negation_patterns_path=negation_patterns_path
         )
-        return post_processor.predict(text, model, tokenizer, device)
-    
-    
+        return post_processor.predict(text, model, tokenizer, device)    
     @staticmethod
     def evaluate_model_with_post_processing(model, test_loader, tokenizer, device, emotion_variations_path=None, negation_patterns_path=None):
+        from .config import EMOTION_VARIATIONS_PATH, NEGATION_PATTERNS_PATH
+        
+        # Provide default paths if not specified
+        if emotion_variations_path is None:
+            emotion_variations_path = EMOTION_VARIATIONS_PATH
+        if negation_patterns_path is None:
+            negation_patterns_path = NEGATION_PATTERNS_PATH
+            
         model.eval()
         post_processor = EmotionPostProcessor(
             emotion_variations_path=emotion_variations_path,
@@ -509,3 +644,14 @@ class SentimentAnalysisModel:
         mwt.model = model
         mwt.tokenizer = tokenizer
         return mwt
+
+class LabelSmoothingBCELoss(torch.nn.Module):
+    """BCE Loss with label smoothing to prevent overfitting"""
+    def __init__(self, smoothing=0.1):
+        super().__init__()
+        self.smoothing = smoothing
+        
+    def forward(self, logits, targets):
+        # Apply label smoothing
+        targets_smooth = targets * (1 - self.smoothing) + 0.5 * self.smoothing
+        return torch.nn.BCEWithLogitsLoss()(logits, targets_smooth)

@@ -7,6 +7,18 @@ from collections import Counter
 from typing import Optional, Tuple
 from src.config import EMOTION_STATES
 from sklearn.metrics import confusion_matrix, roc_curve, auc
+import re
+import string
+import os
+
+try:
+    import nltk
+    from nltk.corpus import stopwords
+    nltk.download('stopwords', quiet=True)
+    NLTK_AVAILABLE = True
+except ImportError:
+    NLTK_AVAILABLE = False
+    print("NLTK not available. Using basic stopwords.")
 
 class PlotGenerator:
     
@@ -160,24 +172,74 @@ class PlotGenerator:
             
         emotion_counts = df[emotional_states].sum().sort_values(ascending=False)
         self._setup_plot(figsize=figsize)
-        sns.barplot(x=emotion_counts.index, y=emotion_counts.values, palette=palette)
+        sns.barplot(x=emotion_counts.index, y=emotion_counts.values, palette=palette)        
         plt.title('Emotional States in Patient Sentiment', fontsize=16, fontweight='bold')
         plt.xlabel('Emotional State', fontsize=13)
         plt.ylabel('Count', fontsize=13)
         plt.tight_layout()
         plt.show()
 
-    def plot_text_wordcloud(self, series, title='Word Cloud', figsize=(10, 6)):
+    def plot_text_wordcloud(self, series, title='Word Cloud', figsize=(10, 6), remove_stopwords=True):
+        # Get stopwords using NLTK or fallback to CSV-based set
+        if remove_stopwords:
+            if NLTK_AVAILABLE:
+                stop_words = set(stopwords.words('english'))
+                # Add stopwords from CSV file
+                csv_stopwords = self.get_default_stopwords()
+                stop_words = stop_words.union(csv_stopwords)
+            else:
+                # Use CSV-based stopwords as fallback
+                stop_words = self.get_default_stopwords()
+        else:
+            stop_words = set()
         
-        words = ' '.join(series.dropna().astype(str)).lower().split()
-        word_freq = Counter(words)
+        # Process text: join all text, convert to lowercase, remove punctuation
+        text = ' '.join(series.dropna().astype(str))
+        text = text.lower()
+        
+        # Remove punctuation and split into words
+        # Keep only alphabetic characters and spaces
+        text = re.sub(r'[^a-zA-Z\s]', ' ', text)
+        words = text.split()
+        
+        # Filter out stopwords and very short words (less than 3 characters)
+        if remove_stopwords:
+            filtered_words = [word for word in words if word not in stop_words and len(word) >= 3]
+        else:
+            filtered_words = [word for word in words if len(word) >= 3]
+        
+        # Create word frequency counter
+        word_freq = Counter(filtered_words)
+        
+        # Remove words that appear only once (optional, can be commented out)
+        word_freq = {word: freq for word, freq in word_freq.items() if freq > 1}
+        
+        if not word_freq:
+            print("No words remaining after filtering. Try setting remove_stopwords=False or check your data.")
+            return
+        
         self._setup_plot(figsize=figsize)
-        wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
+
+        # Create word cloud with better parameters
+        wordcloud = WordCloud(
+            width=800, 
+            height=400, 
+            background_color='white',
+            max_words=100,
+            relative_scaling=0.5,
+            colormap='viridis',
+            stopwords=stop_words if remove_stopwords else None
+        ).generate_from_frequencies(word_freq)
+        
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis('off')
         plt.title(title, fontsize=16, fontweight='bold')
         plt.tight_layout()
         plt.show()
+        
+        # Print some statistics
+        print(f"Total unique words after filtering: {len(word_freq)}")
+        print(f"Top 10 most frequent words: {dict(word_freq.most_common(10))}")
 
     def plot_confusion_matrix(self, conf_matrix, classes=None, title='Confusion Matrix', 
                              figsize=(8, 6), cmap='Blues', normalize=False):
@@ -936,3 +998,77 @@ class PlotGenerator:
         plt.yticks(fontsize=11)
         plt.tight_layout()
         plt.show()
+
+    def get_default_stopwords(self):
+        try:
+            # Try to load from CSV file
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            stopwords_file = os.path.join(current_dir, 'data', 'default_stopwords.csv')
+            if os.path.exists(stopwords_file):
+                df = pd.read_csv(stopwords_file)
+                return set(df['word'].str.lower())
+        except Exception as e:
+            print(f"Warning: Could not load stopwords from CSV file: {e}")
+
+    def plot_text_wordcloud_custom_stopwords(self, series, title='Word Cloud', figsize=(10, 6),
+                                            custom_stopwords=None, remove_default_stopwords=True):
+        # Start with NLTK stopwords if available, otherwise use CSV-based fallback
+        if remove_default_stopwords:
+            if NLTK_AVAILABLE:
+                default_stopwords = set(stopwords.words('english'))
+                # Add stopwords from CSV file
+                csv_stopwords = self.get_default_stopwords()
+                default_stopwords = default_stopwords.union(csv_stopwords)
+            else:
+                # Use CSV-based stopwords as fallback
+                default_stopwords = self.get_default_stopwords()
+        else:
+            default_stopwords = set()
+        
+        # Add custom stopwords if provided
+        if custom_stopwords:
+            if isinstance(custom_stopwords, (list, tuple)):
+                custom_stopwords = set(custom_stopwords)
+            default_stopwords.update(custom_stopwords)
+        
+        # Process text: join all text, convert to lowercase, remove punctuation
+        text = ' '.join(series.dropna().astype(str))
+        text = text.lower()
+        
+        # Remove punctuation and split into words
+        text = re.sub(r'[^a-zA-Z\s]', ' ', text)
+        words = text.split()
+        
+        # Filter out stopwords and very short words
+        filtered_words = [word for word in words if word not in default_stopwords and len(word) >= 3]
+        
+        # Create word frequency counter
+        word_freq = Counter(filtered_words)
+        # Remove words that appear only once
+        for word in list(word_freq):
+            if word_freq[word] <= 1:
+                del word_freq[word]
+        if not word_freq:
+            print("No words remaining after filtering. Try reducing stopwords or check your data.")
+            return
+        self._setup_plot(figsize=figsize)
+        
+        # Create word cloud
+        wordcloud = WordCloud(
+            width=800, 
+            height=400, 
+            background_color='white',
+            max_words=100,
+            relative_scaling=0.5,
+            colormap='viridis',
+            stopwords=default_stopwords
+        ).generate_from_frequencies(word_freq)
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title(title, fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+        
+        # Print some statistics
+        print(f"Total unique words after filtering: {len(word_freq)}")
+        print(f"Top 10 most frequent words: {dict(word_freq.most_common(10))}")

@@ -2,21 +2,24 @@ import streamlit as st
 import torch
 import numpy as np
 import pandas as pd
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import os
 import time
-# Internal imports
-from src.clinical_notes_prediction import ClinicalNotesNoShowPredictor
-from src.config import PREDICTION_MODEL_EXPORT_PATH
-from src.clinical_topic_model import ClinicalTopicModel
-from src.config import TOPIC_MODEL_EXPORT_PATH
-import joblib
-from medspacy.visualization import visualize_ent
-from wordcloud import WordCloud
 import io
-
 import warnings
 import matplotlib
+import joblib
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from medspacy.visualization import visualize_ent
+from wordcloud import WordCloud
+
+# Internal imports
+import src.config as config
+from src.config import NLP_CONFIG, PREDICTION_MODEL_EXPORT_PATH, SENTIMENT_MODEL_EXPORT_PATH_RAW, TOPIC_MODEL_EXPORT_PATH
+from src.sentiment_analysis import SentimentAnalysisModel
+from src.sentiment_analysis import EmotionPostProcessor
+from src.clinical_notes_prediction import ClinicalNotesNoShowPredictor
+from src.clinical_topic_model import ClinicalTopicModel
+
 matplotlib.use('Agg')
 
 warnings.filterwarnings("ignore")
@@ -62,11 +65,10 @@ model_options = [
 ]
 
 def load_tinybert_model():
-    model_dir = os.path.join("models", "nlp", "sentiment_analysis_optimized")  # Use optimized model
+    model_dir = SENTIMENT_MODEL_EXPORT_PATH_RAW
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(model_dir)
-    model = model.to(device)
+    model = SentimentAnalysisModel.load_from_pretrained(model_dir, device=NLP_CONFIG['device'])
+    tokenizer = model.tokenizer
     return model, tokenizer, device
 
 @st.cache_resource
@@ -85,8 +87,6 @@ def load_topic_model():
 
 @st.cache_resource
 def get_clinical_topic_model():
-    from src.clinical_topic_model import ClinicalTopicModel
-    import src.config as config
     model = ClinicalTopicModel(config)
     return model
 
@@ -100,9 +100,17 @@ emotion_emojis = {
 }
 emotion_labels = list(emotion_emojis.keys())
 
-# Predict emotions (raw, no post-processing)
-def predict_emotions_raw(text, model, tokenizer, device):
-    model.eval()
+
+def predict_emotions(text, model, tokenizer, device):
+    from src.config import EMOTION_VARIATIONS_PATH, NEGATION_PATTERNS_PATH
+
+    postprocessor = EmotionPostProcessor(
+        emotion_variations_path=EMOTION_VARIATIONS_PATH,
+        negation_patterns_path=NEGATION_PATTERNS_PATH
+    )
+    # Use model.model for both postprocessor and inference
+    results = postprocessor.predict(text, model.model, tokenizer, device)
+    model.model.eval()
     encoding = tokenizer.encode_plus(
         text,
         add_special_tokens=True,
@@ -116,11 +124,10 @@ def predict_emotions_raw(text, model, tokenizer, device):
     input_ids = encoding['input_ids'].to(device)
     attention_mask = encoding['attention_mask'].to(device)
     with torch.no_grad():
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        outputs = model.model(input_ids=input_ids, attention_mask=attention_mask)
         logits = outputs.logits
         probs = torch.sigmoid(logits).cpu().numpy()[0]
-    # Use 0.5 threshold for all emotions
-    results = {emo: bool(probs[i] >= 0.5) for i, emo in enumerate(emotion_labels)}
+    
     return results, probs
 
 def predict_noshow(text, predictor):
@@ -174,7 +181,7 @@ def plot_highlighted_ents(text, clinical_topic_model):
 def show_tinybert_results(input_text):
     model, tokenizer, device = load_tinybert_model()
     with st.spinner("Analyzing emotions..."):
-        results, probs = predict_emotions_raw(input_text, model, tokenizer, device)
+        results, probs = predict_emotions(input_text, model, tokenizer, device)
     st.subheader("Detected Emotions")
     detected = [
         f"<div style='display: inline-block; text-align: center; margin: 0 24px;'><div style='font-size: 6em'>{emotion_emojis[emo]}</div><div style='font-size: 1.2em; margin-top: 0.2em'>{emo.capitalize()}</div></div>"

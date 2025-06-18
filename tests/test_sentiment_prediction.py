@@ -3,7 +3,8 @@ import numpy as np
 import torch
 import os
 from src.sentiment_analysis import SentimentAnalysisModel
-from src.config import EMOTION_STATES, NLP_CONFIG, SENTIMENT_MODEL_EXPORT_PATH_RAW, SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED
+from src.config import EMOTION_STATES, NLP_CONFIG, SENTIMENT_MODEL_EXPORT_PATH_RAW, SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED,\
+     EMOTION_VARIATIONS_PATH, NEGATION_PATTERNS_PATH
 from src.emotion_postprocessor import EmotionPostProcessor
 
 # Example test texts
@@ -94,8 +95,8 @@ def test_sentiment_model_predictions_optimized(capfd):
     print("\n--- Running test_sentiment_model_predictions_optimized ---")
     model, tokenizer, model_dir = _load_model_and_tokenizer(SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED)
     post_processor = EmotionPostProcessor(
-        emotion_variations_path=os.path.join(model_dir, 'emotion_variations.csv'),
-        negation_patterns_path=os.path.join(model_dir, 'negation_patterns.csv')
+        emotion_variations_path=EMOTION_VARIATIONS_PATH,
+        negation_patterns_path=NEGATION_PATTERNS_PATH
     )
     model.model.eval()
     results = []
