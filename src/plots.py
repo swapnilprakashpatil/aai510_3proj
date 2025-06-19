@@ -213,7 +213,7 @@ class PlotGenerator:
         word_freq = Counter(filtered_words)
         
         # Remove words that appear only once (optional, can be commented out)
-        word_freq = {word: freq for word, freq in word_freq.items() if freq > 1}
+        word_freq = Counter({word: freq for word, freq in word_freq.items() if freq > 1})
         
         if not word_freq:
             print("No words remaining after filtering. Try setting remove_stopwords=False or check your data.")
