@@ -5,12 +5,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 
+from src import config
+from src.config import RANDOM_STATE
+
 # Add the project root directory to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src import config
+
 
 class DataPreprocessor:
     def __init__(self, config):
@@ -37,7 +40,7 @@ class DataPreprocessor:
     def split_data(self, df: pd.DataFrame, target_column: str):
         X = df.drop(columns=[target_column])
         y = df[target_column]
-        return train_test_split(X, y, test_size=0.2, random_state=42)
+        return train_test_split(X, y, test_size=0.2, random_state=RANDOM_STATE)
 
     def _drop_unnecessary_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         print("Dropping unnecessary columns...")

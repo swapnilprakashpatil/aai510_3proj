@@ -160,23 +160,47 @@ def plot_highlighted_ents(text, clinical_topic_model):
         "TEST_RESULT": {"emoji": "📊", "bg_color": "#3CBE00"},
         "HISTORY": {"emoji": "📖", "bg_color": "#00f8a5"}
     }
+    context_styles = {
+        "is_negated": {"label": "NEGATED", "color": "#222", "bg": "#a901b2", "emoji": "🚫"},
+        "is_uncertain": {"label": "UNCERTAIN", "color": "#222", "bg": "#a901b2", "emoji": "❓"},
+        "is_possible": {"label": "POSSIBLE", "color": "#222", "bg": "#a901b2", "emoji": "🤔"},
+        "is_historical": {"label": "HISTORICAL", "color": "#222", "bg": "#a901b2", "emoji": "⏳"},
+        "is_hypothetical": {"label": "HYPOTHETICAL", "color": "#222", "bg": "#a901b2", "emoji": "💭"},
+        "is_family": {"label": "FAMILY", "color": "#222", "bg": "#a901b2", "emoji": "👪"},
+    }
     html = ""
     last_end = 0
-
     for ent in doc.ents:
         html += text[last_end:ent.start_char]
         style = entity_styles.get(ent.label_, {"emoji": "🔹", "bg_color": "#f0f0f0"})
+        context_tags = []
+        context_emojis = []
+        context_bg = None
+        for ctx, ctx_style in context_styles.items():
+            if hasattr(ent._, ctx) and getattr(ent._, ctx):
+                context_tags.append(ctx_style["emoji"] + " " + ctx_style["label"])
+                context_emojis.append(ctx_style["emoji"])
+                context_bg = ctx_style["bg"]  # Use the last found context bg
+        # Compose context badge
+        badge = ""
+        if context_tags:
+            badge = f'<span style="font-size:1em; margin-right:2px;">{" ".join(context_emojis)}</span>'
+        # Use context bg if present, else entity bg
+        bg_color = context_bg if context_bg else style["bg_color"]
         html += (
             f'<span style="font-size:1.2em;" title="{ent.label_}">{style["emoji"]}</span>'
-            f'<span style="padding:2px 6px; border-radius:4px; background:{style["bg_color"]}; margin-right:2px;">{ent.text}</span>'
+            f'{badge}'
+            f'<span style="padding:2px 6px; border-radius:4px; background:{bg_color}; margin-right:2px; border:1.5px solid #888;">{ent.text}</span>'
         )
         last_end = ent.end_char
-
     html += text[last_end:]
 
     st.markdown(f"### Highlighted Entities")
     st.markdown(f"<div style='font-family:monospace'>{html}</div>", unsafe_allow_html=True)
-    st.write('Entities:', [(ent.text, ent.label_) for ent in doc.ents])
+    # Legend
+    legend_html = "<b>Legend:</b> " + " ".join([f'{v["emoji"]}={v["label"]}' for v in context_styles.values()])
+    st.markdown(legend_html, unsafe_allow_html=True)
+    st.write('Entities:', [(ent.text, ent.label_, {ctx: getattr(ent._, ctx, False) for ctx in context_styles.keys()}) for ent in doc.ents])
 
 def show_tinybert_results(input_text):
     model, tokenizer, device = load_tinybert_model()
@@ -220,7 +244,8 @@ def main():
     st.sidebar.markdown("""
     <div style='text-align: center;'>
         <span style='font-size: 120px;'>🧑‍⚕️</span></br>
-        <span style='font-size: 30px;'>Patient Appointment Data Analysis</span>
+        <span style='font-size: 30px;'>SmartCARE.ai</span></br>
+        <span style='font-size: 15px;'>PATIENT BEHAVIOR FOR SMART SCHEDULING</span></br></br>
     </div>
     """, unsafe_allow_html=True)
 
@@ -314,7 +339,7 @@ def main():
         for percent in range(0, 101, 10):
             time.sleep(0.01)
             progress_bar.progress(percent)
-        progress_bar.empty()  # Remove Streamlit bar
+        progress_bar.empty()
         st.markdown("""
         <div style='width: 100%; background: #e0e0e0; border-radius: 10px; height: 18px; margin: 10px 0;'>
             <div style='width: 100%; background: #2196F3; height: 18px; border-radius: 10px;'></div>

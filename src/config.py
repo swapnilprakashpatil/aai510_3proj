@@ -13,11 +13,8 @@ RUN_CONFIGURATION = [
     { 'step': 'dataload', 'enabled': True },
     { 'step': 'data_preprocess', 'enabled': True },
     { 'step': 'eda', 'enabled': True },
-    { 'step': 'supervised_logistic_regression', 'enabled': False },
-    { 'step': 'supervised_random_forest', 'enabled': True },
-    { 'step': 'unsupervised_pca', 'enabled': True },
-    { 'step': 'unsupervised_kmeans', 'enabled': True },
-    { 'step': 'unsupervised_gmm', 'enabled': True },
+    { 'step': 'supervised_prediction', 'enabled': False },
+    { 'step': 'unsupervised_clustering', 'enabled': True },
     { 'step': 'nlp_sentiment_analysis', 'enabled': True },
     { 'step': 'nlp_noshow_prediction', 'enabled': True },
     { 'step': 'nlp_topic_modeling', 'enabled': True }
