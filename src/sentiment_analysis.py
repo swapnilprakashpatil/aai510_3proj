@@ -559,7 +559,9 @@ class SentimentAnalysisModel:
             probs = torch.sigmoid(logits).cpu().numpy()[0]
             preds = (probs >= threshold)        # Always use EMOTION_STATES for output keys
         from src.config import EMOTION_STATES
-        return {emotion: bool(pred) for emotion, pred in zip(EMOTION_STATES, preds)}    @staticmethod
+        return {emotion: bool(pred) for emotion, pred in zip(EMOTION_STATES, preds)}
+
+    @staticmethod
     def predict_emotions(text, model, tokenizer, device, emotion_variations_path=None, negation_patterns_path=None):
         from .config import EMOTION_VARIATIONS_PATH, NEGATION_PATTERNS_PATH
         

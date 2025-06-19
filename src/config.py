@@ -2,23 +2,34 @@
 
 import os
 import sys
+import json
+from dotenv import load_dotenv
 
 # Add the project root directory to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Configuration settings for the Patient Appointments Show/No Show Prediction and Analysis project
+# Load .env file
+load_dotenv()
+
+# Read each pipeline step from .env separately
 RUN_CONFIGURATION = [
-    { 'step': 'dataload', 'enabled': True },
-    { 'step': 'data_preprocess', 'enabled': True },
-    { 'step': 'eda', 'enabled': True },
-    { 'step': 'supervised_prediction', 'enabled': False },
-    { 'step': 'unsupervised_clustering', 'enabled': True },
-    { 'step': 'nlp_sentiment_analysis', 'enabled': True },
-    { 'step': 'nlp_noshow_prediction', 'enabled': True },
-    { 'step': 'nlp_topic_modeling', 'enabled': True }
+    { 'step': 'dataload', 'enabled': os.getenv('RUN_DATALOAD', 'true').lower() == 'true' },
+    { 'step': 'data_preprocess', 'enabled': os.getenv('RUN_DATA_PREPROCESS', 'true').lower() == 'true' },
+    { 'step': 'eda', 'enabled': os.getenv('RUN_EDA', 'true').lower() == 'true' },
+    { 'step': 'supervised_logistic_regression', 'enabled': os.getenv('RUN_SUPERVISED_LOGISTIC_REGRESSION', 'false').lower() == 'true' },
+    { 'step': 'supervised_random_forest', 'enabled': os.getenv('RUN_SUPERVISED_RANDOM_FOREST', 'true').lower() == 'true' },
+    { 'step': 'unsupervised_pca', 'enabled': os.getenv('RUN_UNSUPERVISED_PCA', 'true').lower() == 'true' },
+    { 'step': 'unsupervised_kmeans', 'enabled': os.getenv('RUN_UNSUPERVISED_KMEANS', 'true').lower() == 'true' },
+    { 'step': 'unsupervised_gmm', 'enabled': os.getenv('RUN_UNSUPERVISED_GMM', 'true').lower() == 'true' },
+    { 'step': 'nlp_sentiment_analysis', 'enabled': os.getenv('RUN_NLP_SENTIMENT_ANALYSIS', 'true').lower() == 'true' },
+    { 'step': 'nlp_noshow_prediction', 'enabled': os.getenv('RUN_NLP_NOSHOW_PREDICTION', 'true').lower() == 'true' },
+    { 'step': 'nlp_topic_modeling', 'enabled': os.getenv('RUN_NLP_TOPIC_MODELING', 'true').lower() == 'true' },
 ]
+
+# Configuration settings for the Patient Appointments Show/No Show Prediction and Analysis project
+# RUN_CONFIGURATION = json.loads(os.getenv('RUN_CONFIGURATION'))
 
 # Base directory of the project
 BASE_DIR = project_root

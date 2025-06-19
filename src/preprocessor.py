@@ -5,15 +5,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 
-from src import config
-from src.config import RANDOM_STATE
-
 # Add the project root directory to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-
+from src.config import RANDOM_STATE
 
 class DataPreprocessor:
     def __init__(self, config):

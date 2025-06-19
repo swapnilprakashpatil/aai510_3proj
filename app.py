@@ -245,7 +245,7 @@ def main():
     <div style='text-align: center;'>
         <span style='font-size: 120px;'>🧑‍⚕️</span></br>
         <span style='font-size: 30px;'>SmartCARE.ai</span></br>
-        <span style='font-size: 15px;'>PATIENT BEHAVIOR FOR SMART SCHEDULING</span></br></br>
+        <span style='font-size: 15px;'>UNDERSTANDING NO-SHOWS & PATIENT BEHAVIOR FOR SMART SCHEDULING</span></br></br>
     </div>
     """, unsafe_allow_html=True)
 
