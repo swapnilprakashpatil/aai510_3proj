@@ -100,7 +100,7 @@ aai510_3proj/
 
 1. **Clone the repository:**
   ```bash
-  git clone <repository-url>
+  git clone https://github.com/swapnilprakashpatil/aai510_3proj.git
   ```
 
 2. **Install dependencies:**
@@ -110,5 +110,5 @@ aai510_3proj/
 
 3. **Run the analysis notebook:**
   ```bash
-  jupyter notebook notebooks/Patient_Appointment_Analysis.ipynb
+  jupyter notebook notebooks/Final Project Section4-Team 3.ipynb
   ```
