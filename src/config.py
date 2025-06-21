@@ -93,10 +93,10 @@ NLP_CONFIG = {
     'tiny_model': MODEL_NAMES['TINY'],
     'device': 'cuda' if os.environ.get('USE_CUDA', 'False').lower() == 'true' else 'cpu',
     'max_length': 128,
-    'batch_size': 16,
-    'learning_rate': 5e-5,
+    'learning_rate': 3e-5,  # Lowered for more stable training
+    'batch_size': 8,        # Smaller batch size for better generalization
+    'epochs': 6,            # Increased epochs for more training
     'weight_decay': 0.01,
-    'epochs': 3,
     'warmup_ratio': 0.1,
     'eval_steps': 10,  # now configurable
     'save_steps': 10,  # now configurable
@@ -109,18 +109,28 @@ NLP_CONFIG = {
     'label_id_mapping': {'negative': 0, 'positive': 1}
 }
 
-# Hyperparameters for models (example)
+# Hyperparameters for models (expanded)
 HYPERPARAMETERS = {
     'tinybert': [
         {'learning_rate': 5e-5, 'batch_size': 16, 'epochs': 2, 'patience': 1, 'accumulation_steps': 4},
         {'learning_rate': 1e-4, 'batch_size': 16, 'epochs': 2, 'patience': 1, 'accumulation_steps': 4},
+        {'learning_rate': 3e-5, 'batch_size': 8, 'epochs': 6, 'patience': 2, 'accumulation_steps': 2},
+        {'learning_rate': 2e-5, 'batch_size': 32, 'epochs': 4, 'patience': 2, 'accumulation_steps': 4},
+        {'learning_rate': 1e-5, 'batch_size': 16, 'epochs': 8, 'patience': 3, 'accumulation_steps': 2},
     ],
     'tiny_clinicalbert': [
         {
             "model_name": 'nlpie/tiny-clinicalbert',
             "max_length": 128,
-            "epochs": 3,
+            "epochs": 6,
             "batch_size": 8,
+            "learning_rate": 3e-5
+        },
+        {
+            "model_name": 'nlpie/tiny-clinicalbert',
+            "max_length": 256,
+            "epochs": 8,
+            "batch_size": 16,
             "learning_rate": 2e-5
         }
     ]
