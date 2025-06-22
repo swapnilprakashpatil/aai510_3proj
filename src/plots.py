@@ -1,17 +1,19 @@
+import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import re
-import string
-import os
-import nltk
-from wordcloud import WordCloud
 from collections import Counter
+import os
+import re
+from wordcloud import WordCloud
+from sklearn.metrics import (
+    confusion_matrix, accuracy_score, roc_curve, auc, precision_recall_curve, average_precision_score
+)
+
 from typing import Optional, Tuple
 from src.config import EMOTION_STATES
-from sklearn.metrics import confusion_matrix, roc_curve, auc, accuracy_score
-from mpl_toolkits.mplot3d import Axes3D
+
+import nltk
 from nltk.corpus import stopwords
 
 try:
@@ -1038,10 +1040,8 @@ class PlotGenerator:
         
         # Filter out stopwords and very short words
         filtered_words = [word for word in words if word not in default_stopwords and len(word) >= 3]
-        
-        # Create word frequency counter
-        word_freq = Counter(filtered_words)
         # Remove words that appear only once
+        word_freq = Counter(filtered_words)
         for word in list(word_freq):
             if word_freq[word] <= 1:
                 del word_freq[word]
@@ -1219,5 +1219,170 @@ class PlotGenerator:
         plt.ylabel('Score')
         plt.grid(True)
         plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def plot_prediction_model_performance(self, summary_df, show_tuning_impact=False, X_test=None, y_test=None, models_dict=None):
+        from sklearn.metrics import precision_recall_curve, average_precision_score
+        models = summary_df.index
+        f1_scores = summary_df['F1']
+        precision_scores = summary_df['Precision']
+        recall_scores = summary_df['Recall']
+        roc_scores = summary_df['ROC_AUC']
+        colors = plt.cm.viridis(np.linspace(0, 1, len(models)))
+        if show_tuning_impact:
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(18, 14))
+        else:
+            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+        # F1 Score comparison
+        bars1 = ax1.barh(models, f1_scores, color=colors)
+        ax1.set_xlabel('F1 Score')
+        ax1.set_title('Model F1 Score Comparison')
+        ax1.set_xlim(0, 1)
+        for i, v in enumerate(f1_scores):
+            ax1.text(v + 0.01, i, f'{v:.3f}', va='center')
+        # Precision vs Recall
+        scatter = ax2.scatter(recall_scores, precision_scores, c=range(len(models)), 
+                             cmap='viridis', s=100, alpha=0.7)
+        ax2.set_xlabel('Recall')
+        ax2.set_ylabel('Precision')
+        ax2.set_title('Precision vs Recall Trade-off')
+        ax2.grid(True, alpha=0.3)
+        for i, model in enumerate(models):
+            ax2.annotate(str(model).split('(')[0], (recall_scores[i], precision_scores[i]), 
+                        xytext=(5, 5), textcoords='offset points', fontsize=8)
+        # ROC AUC comparison
+        bars3 = ax3.barh(models, roc_scores, color=colors)
+        ax3.set_xlabel('ROC AUC')
+        ax3.set_title('Model ROC AUC Comparison')
+        ax3.set_xlim(0, 1)
+        for i, v in enumerate(roc_scores):
+            ax3.text(v + 0.01, i, f'{v:.3f}', va='center')
+
+        # Confusion matrix for best model
+        confusion_plotted = False
+        if X_test is not None and y_test is not None and models_dict is not None:
+            best_model_name = summary_df.index[0]
+            best_model = models_dict.get(best_model_name)
+            if best_model is not None:
+                try:
+                    y_pred = best_model.predict(X_test)
+                    cm = confusion_matrix(y_test, y_pred)
+                    if show_tuning_impact:
+                        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, ax=ax4)
+                        ax4.set_title(f'Confusion Matrix: {best_model_name}')
+                        ax4.set_xlabel('Predicted')
+                        ax4.set_ylabel('Actual')
+                        confusion_plotted = True
+                    else:
+                        plt.figure(figsize=(5, 4))
+                        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False)
+                        plt.title(f'Confusion Matrix: {best_model_name}')
+                        plt.xlabel('Predicted')
+                        plt.ylabel('Actual')
+                        plt.tight_layout()
+                        plt.show()
+                        confusion_plotted = True
+                except Exception as e:
+                    if show_tuning_impact:
+                        ax4.text(0.5, 0.5, f"Could not plot confusion matrix for {best_model_name}: {e}",
+                                 ha='center', va='center', fontsize=12)
+                        ax4.axis('off')
+                    else:
+                        print(f"Could not plot confusion matrix for {best_model_name}: {e}")
+            else:
+                if show_tuning_impact:
+                    ax4.text(0.5, 0.5, f"Best model '{best_model_name}' not found in models_dict. Skipping confusion matrix plot.",
+                             ha='center', va='center', fontsize=12)
+                    ax4.axis('off')
+                else:
+                    print(f"Best model '{best_model_name}' not found in models_dict. Skipping confusion matrix plot.")
+        else:
+            if show_tuning_impact:
+                ax4.text(0.5, 0.5, "", ha='center', va='center', fontsize=12)
+                ax4.axis('off')
+
+        # Precision-Recall curves for all models
+        if X_test is not None and y_test is not None and models_dict is not None:
+            plt.figure(figsize=(8, 6))
+            for i, model_name in enumerate(models):
+                model = models_dict.get(model_name)
+                if model is not None:
+                    try:
+                        # Try to get probability estimates
+                        if hasattr(model, 'predict_proba'):
+                            y_scores = model.predict_proba(X_test)[:, 1]
+                        elif hasattr(model, 'decision_function'):
+                            y_scores = model.decision_function(X_test)
+                        else:
+                            continue
+                        precision, recall, _ = precision_recall_curve(y_test, y_scores)
+                        ap = average_precision_score(y_test, y_scores)
+                        plt.plot(recall, precision, label=f"{model_name} (AP={ap:.2f})", color=colors[i])
+                    except Exception as e:
+                        print(f"Could not plot PR curve for {model_name}: {e}")
+            plt.xlabel('Recall')
+            plt.ylabel('Precision')
+            plt.title('Precision-Recall Curves (Test Set)')
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+            plt.tight_layout()
+            plt.show()
+
+        if show_tuning_impact:
+            # Improvement analysis
+            baseline_models = ['Logistic Regression', 'Random Forest', 'XGBoost']
+            tuned_models_list = ['Logistic Regression (Tuned)', 'Random Forest (Tuned)', 'XGBoost (Tuned)']
+            improvements = []
+            model_types = []
+            for baseline, tuned in zip(baseline_models, tuned_models_list):
+                if baseline in summary_df.index and tuned in summary_df.index:
+                    improvement = summary_df.loc[tuned, 'F1'] - summary_df.loc[baseline, 'F1']
+                    improvements.append(improvement)
+                    model_types.append(baseline.replace(' ', '\n'))
+            if len(improvements) > 0:
+                fig3, ax5 = plt.subplots(1, 1, figsize=(6, 5))
+                bars4 = ax5.bar(model_types, improvements, color=['green' if x > 0 else 'red' for x in improvements])
+                ax5.set_ylabel('F1 Score Improvement')
+                ax5.set_title('Hyperparameter Tuning Impact')
+                ax5.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+                for i, v in enumerate(improvements):
+                    ax5.text(i, v + 0.001, f'{v:+.3f}', ha='center', va='bottom' if v > 0 else 'top')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_prediction_feature_importances(self, model, feature_names, title="Feature Importances", top_n=10, color='#4F8FC9'):
+        importances = None
+        # Try to get feature importances from model
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+        elif hasattr(model, "coef_"):
+            # For logistic regression, use absolute value of coefficients
+            importances = np.abs(model.coef_)[0]
+        else:
+            print("Model does not have feature importances or coefficients.")
+            return
+
+        # Try to get feature names from model if available
+        if hasattr(model, "feature_names_in_"):
+            feature_names = list(model.feature_names_in_)
+        # Align feature_names and importances if lengths mismatch
+        if len(importances) != len(feature_names):
+            min_len = min(len(importances), len(feature_names))
+            importances = importances[:min_len]
+            feature_names = feature_names[:min_len]
+
+        top_n = min(top_n, len(importances))
+        indices = np.argsort(importances)[-top_n:][::-1]
+        plt.figure(figsize=(8, 5))
+        plt.barh(
+            [feature_names[i] for i in indices],
+            importances[indices],
+            color=color
+        )
+        plt.xlabel('Importance')
+        plt.ylabel('Feature')
+        plt.title(title)
+        plt.gca().invert_yaxis()  # Highest importance at the top
         plt.tight_layout()
         plt.show()

@@ -44,38 +44,69 @@ https://smartcareai.streamlit.app/
 aai510_3proj/
 │
 ├── data/
-│   ├── raw/                # Raw data files
-│   ├── processed/          # Processed data files
+│   ├── raw/                    # Raw data files
+│   ├── synthetic_reasons/      # Synthetic no-show reason templates
+│   │   ├── age_based_reasons.csv
+│   │   ├── clinical_terms_rules.csv
+│   │   ├── gender_based_reasons.csv
+│   │   ├── no_show_reasons.csv
+│   │   ├── patient_notes_templates.csv
+│   │   ├── patient_sentiment_templates.csv
+│   │   ├── positive_attendance_reasons.csv
+│   │   ├── rule_engine.csv
+│   │   └── sms_based_reasons.csv
 │   ├── emotion_variations.csv
-│   └── negation_patterns.csv
+│   ├── negation_patterns.csv
+│   ├── default_stopwords.csv
+│   └── dataset.csv             # Main dataset
 │
 ├── models/
-│   ├── supervised/         # Supervised learning models
-│   ├── unsupervised/       # Unsupervised learning models
-│   └── nlp/                # NLP models (e.g., TinyBERT)
+│   ├── supervised/             # Supervised learning models
+│   ├── unsupervised/           # Unsupervised learning models
+│   └── nlp/
+│       ├── prediction/
+│       │   ├── sentiment_analysis_optimized/   # Optimized sentiment models
+│       │   └── sentiment_analysis_raw/         # Raw sentiment models
+│       └── topic_model/                        # Topic modeling artifacts
 │
 ├── notebooks/
+│   ├── Clustering.ipynb
 │   ├── DataSimulation.ipynb
-│   └── Patient_Appointment_Analysis.ipynb
+│   ├── EDA.ipynb
+│   ├── Final Project Section4-Team 3.ipynb
+│   ├── NoShowPrediction.ipynb
+│   ├── PatientSentimentAnalysis.ipynb
+│   ├── Supervised.ipynb
+│   ├── Supervised_Clean.ipynb
+│   └── TopicModeling.ipynb
 │
 ├── src/
-│   ├── config.py           # Central configuration
-│   ├── preprocessing.py    # Data preprocessing
-│   ├── supervised.py       # Supervised ML functions
-│   ├── unsupervised.py     # Unsupervised ML functions
-│   ├── nlp_pipeline.py     # NLP pipeline (TinyBERT, emotion detection)
-│   ├── metrics.py          # Evaluation metrics
-│   ├── plots.py            # Visualization utilities
-│   └── streamlit_app.py    # Streamlit app entry point
+│   ├── __init__.py
+│   ├── clinical_notes_prediction.py            # Clinical note no-show prediction logic
+│   ├── clinical_topic_model.py                 # Clinical topic modeling logic
+│   ├── clustering.py                           # Clustering utilities
+│   ├── config.py                               # Central configuration (hyperparameters, paths, etc.)
+│   ├── data_simulator.py                       # Data simulation utilities
+│   ├── emotion_postprocessor.py                # Postprocessing for emotion detection
+│   ├── helpers.py                              # Helper functions
+│   ├── metrics.py                              # Evaluation metrics
+│   ├── no_show_prediction.py                   # Modular no-show ML pipeline
+│   ├── plots.py                                # Visualization utilities
+│   ├── preprocessor.py                         # Data preprocessing
+│   ├── sentiment_analysis.py                   # Sentiment analysis logic
+│   └── __pycache__/
 │
 ├── tests/
-│   ├── test_nlp_pipeline.py
-│   ├── test_preprocessing.py
-│   ├── test_supervised.py
-│   ├── test_unsupervised.py
-│   └── test_tinybert.py
+│   ├── __init__.py
+│   ├── test_clinical_notes_prediction.py
+│   ├── test_sentiment_anlaysis.py
+│   ├── test_sentiment_prediction.py
+│   └── ...
 │
-└── requirements.txt
+├── app.py                                      # Streamlit app entry point
+├── requirements.txt
+├── setup.py
+└── README.md
 ```
 
 ## Key Features

@@ -38,19 +38,19 @@ model_options = [
             "Patient expresses confusion about medication schedule and is hopeful about recovery."
         ]
     },
-    {
-        "text": "Clinical Notes Analysis (TinyClinicalBERT)",
-        "value": "clinicalbert",
-        "placeholder": "Example: Patient missed previous appointments due to transportation issues.",
-        "button_text": "Predict No-Show from Clinical Note",
-        "examples": [
-            "Patient reported forgetting the appointment.",
-            "Missed due to lack of transportation.",
-            "Appointment was too early in the morning.",
-            "Patient was not feeling well and decided to cancel last minute.",
-            "Patient will attend the appointment as scheduled."
-        ]
-    },
+    # {
+    #     "text": "Clinical Notes Analysis (TinyClinicalBERT)",
+    #     "value": "clinicalbert",
+    #     "placeholder": "Example: Patient missed previous appointments due to transportation issues.",
+    #     "button_text": "Predict No-Show from Clinical Note",
+    #     "examples": [
+    #         "Patient reported forgetting the appointment.",
+    #         "Missed due to lack of transportation.",
+    #         "Appointment was too early in the morning.",
+    #         "Patient was not feeling well and decided to cancel last minute.",
+    #         "Patient will attend the appointment as scheduled."
+    #     ]
+    # },
     {
         "text": "Topic Modeling (LDA) - Clinical Notes",
         "value": "topicmodel",
@@ -240,6 +240,8 @@ NOSHOW_EMOJI = "🚫"
 CALENDAR_EMOJI = "📅"
 
 def main():
+    # Set Streamlit page config to show sidebar by default
+    st.set_page_config(layout="wide")
     # Sidebar
     st.sidebar.markdown("""
     <div style='text-align: center;'>

@@ -18,7 +18,7 @@ RUN_CONFIGURATION = [
     { 'step': 'dataload', 'enabled': os.getenv('RUN_DATALOAD', 'true').lower() == 'true' },
     { 'step': 'data_preprocess', 'enabled': os.getenv('RUN_DATA_PREPROCESS', 'true').lower() == 'true' },
     { 'step': 'eda', 'enabled': os.getenv('RUN_EDA', 'true').lower() == 'true' },
-    { 'step': 'supervised_logistic_regression', 'enabled': os.getenv('RUN_SUPERVISED_LOGISTIC_REGRESSION', 'false').lower() == 'true' },
+    { 'step': 'supervised_prediction', 'enabled': os.getenv('RUN_SUPERVISED_PREDICTION', 'false').lower() == 'true' },
     { 'step': 'supervised_random_forest', 'enabled': os.getenv('RUN_SUPERVISED_RANDOM_FOREST', 'true').lower() == 'true' },
     { 'step': 'unsupervised_pca', 'enabled': os.getenv('RUN_UNSUPERVISED_PCA', 'true').lower() == 'true' },
     { 'step': 'unsupervised_kmeans', 'enabled': os.getenv('RUN_UNSUPERVISED_KMEANS', 'true').lower() == 'true' },
@@ -111,6 +111,35 @@ NLP_CONFIG = {
 
 # Hyperparameters for models (expanded)
 HYPERPARAMETERS = {
+    'logistic_regression': {
+        'C': [0.01, 0.1, 0.5, 1, 2, 5, 10, 20],
+        'solver': ['liblinear', 'lbfgs'],
+        'penalty': ['l1', 'l2'],
+        'class_weight': ['balanced', {0: 1, 1: 2}, {0: 1, 1: 3}, {0: 1, 1: 4}],
+        'max_iter': [1000, 2000]
+    },
+    'lr_n_iter': 20,
+    'random_forest': {
+        'bootstrap': [True, False],
+        'n_estimators': [100, 200, 300],
+        'max_depth': [3, 5, 7, 10, None],
+        'min_samples_split': [2, 5, 10, 20],
+        'min_samples_leaf': [1, 2, 4, 8],
+        'max_features': ['sqrt', 'log2', 0.5, 0.7],
+        'class_weight': ['balanced', 'balanced_subsample', {0: 1, 1: 2}, {0: 1, 1: 3}]
+    },
+    'rf_n_iter': 20,
+    'xgboost': {
+        'n_estimators': [50, 100, 200],
+        'max_depth': [3, 4, 5, 6],
+        'learning_rate': [0.01, 0.05, 0.1, 0.15],
+        'subsample': [0.7, 0.8, 0.9, 1.0],
+        'colsample_bytree': [0.7, 0.8, 0.9, 1.0],
+        'reg_alpha': [0, 0.01, 0.1],
+        'reg_lambda': [0.5, 1, 1.5],
+        'gamma': [0, 0.1, 0.5]
+    },
+    'xgb_n_iter': 20,
     'tinybert': [
         {'learning_rate': 5e-5, 'batch_size': 16, 'epochs': 2, 'patience': 1, 'accumulation_steps': 4},
         {'learning_rate': 1e-4, 'batch_size': 16, 'epochs': 2, 'patience': 1, 'accumulation_steps': 4},
@@ -140,7 +169,7 @@ HYPERPARAMETERS = {
 SENTIMENT_MODEL_EXPORT_PATH_RAW = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_raw')
 SENTIMENT_MODEL_EXPORT_PATH_OPTIMIZED = os.path.join(NLP_MODEL_DIR, 'sentiment_analysis_optimized')
 # Model export path for  prediction
-PREDICTION_MODEL_EXPORT_PATH = os.path.join(NLP_MODEL_DIR, 'prediction')
+PREDICTION_MODEL_EXPORT_PATH = os.path.join(SUPERVISED_MODEL_DIR, 'prediction')
 # Model export path for topic modeling
 TOPIC_MODEL_EXPORT_PATH = os.path.join(NLP_MODEL_DIR, 'topic_model')
 
